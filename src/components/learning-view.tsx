@@ -97,8 +97,8 @@ export function LearningView({ word }: LearningViewProps) {
                  {partOfSpeech === 'preposition' && prepositionDetails && (
                   <>
                     <DetailItem label="Падеж" value={prepositionDetails.case} />
-                    {prepositionDetails.dualCaseExplanation && <DetailItem label="Двойное упр." value={prepositionDetails.dualCaseExplanation} />}
-                    {prepositionDetails.commonContractions && <DetailItem label="Слияния" value={prepositionDetails.commonContractions} />}
+                    <DetailItem label="Двойное управление" value={prepositionDetails.dualCaseExplanation} />
+                    <DetailItem label="Частые слияния" value={prepositionDetails.commonContractions} />
                   </>
                 )}
                 {partOfSpeech === 'conjunction' && conjunctionDetails && (
