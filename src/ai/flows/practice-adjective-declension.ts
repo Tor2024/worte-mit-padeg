@@ -48,28 +48,29 @@ const prompt = ai.definePrompt({
         - Set \`isCorrect\` to \`false\`.
         - Provide the \`correctAnswer\`.
         - Write a comprehensive but clear \`explanation\` in Russian. This explanation is crucial. It must include:
-            a. A clear statement of what the error was (e.g., wrong article, wrong adjective ending).
-            b. A step-by-step breakdown of the rule. Explain *why* the correct ending is what it is. Refer to the case, the gender of the noun, and the type of article (definite, indefinite, or no article).
-            c. Explicitly state the correct ending and why it's used. For example: "Для существительных мужского рода в винительном падеже с неопределенным артиклем прилагательное получает окончание '-en'."
+            a. A clear statement of what the error was (e.g., wrong article, wrong adjective ending, wrong article type).
+            b. **If the user used an indefinite article instead of a definite one, or vice-versa, explain WHY the definite/indefinite article is required here.** For example: "Здесь требуется определенный артикль 'dem', а не неопределенный 'einem', так как в этом контексте мы говорим о конкретном, уже известном доме."
+            c. A step-by-step breakdown of the grammatical rule. Explain *why* the correct ending is what it is. Refer to the case, the gender of the noun, and the type of article (definite, indefinite).
+            d. Explicitly state the correct ending and why it's used. For example: "Для существительных мужского рода в винительном падеже с неопределенным артиклем прилагательное получает окончание '-en'."
 
 4.  **Provide Examples:**
     - Generate two distinct, useful example sentences in German that use the **correctly declined phrase** in the target case.
     - Provide a Russian translation for each example sentence.
 
-**Example Scenario:**
-- Input: { noun: "Haus", nounArticle: "das", adjective: "schön", targetCase: "Dativ", articleType: "definite", userInput: "dem schönen Haus" }
+**Example Scenario (Incorrect Article Type):**
+- Input: { noun: "Haus", nounArticle: "das", adjective: "schön", targetCase: "Dativ", articleType: "definite", userInput: "einem schönen Haus" }
 - Expected Output:
   {
-    "isCorrect": true,
+    "isCorrect": false,
     "correctAnswer": "dem schönen Haus",
-    "explanation": "Совершенно верно! В дательном падеже после определенного артикля прилагательные всегда получают окончание '-en', независимо от рода существительного.",
+    "explanation": "Вы правильно определили падеж (Dativ) и окончание прилагательного, но ошиблись в типе артикля. Задание требовало использовать определенный артикль. Правило: в дательном падеже для существительных среднего рода используется определенный артикль 'dem'. Поэтому верный ответ: 'dem schönen Haus'.",
     "examples": [
       { "sentence": "Ich wohne in dem schönen Haus.", "translation": "Я живу в этом красивом доме." },
       { "sentence": "Wir gehen zu dem schönen Haus.", "translation": "Мы идем к красивому дому." }
     ]
   }
 
-**Example Scenario (Incorrect):**
+**Example Scenario (Incorrect Adjective Ending):**
 - Input: { noun: "Stuhl", nounArticle: "der", adjective: "neu", targetCase: "Akkusativ", articleType: "indefinite", userInput: "einen neue Stuhl" }
 - Expected Output:
   {
