@@ -1,19 +1,18 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import type { Word, WordType } from '@/lib/types';
-import { LearningSession } from '@/components/learning-session';
-import { QuizSession } from '@/components/quiz-session';
-import { MultipleChoiceQuizSession } from '@/components/multiple-choice-quiz-session';
+import { Word, WordType } from '@/lib/types';
+import { UnifiedSession } from '@/components/unified-session';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { BookMarked, Sparkles, Loader2, PlusCircle, Trash2, BookOpen, Lightbulb, FileQuestion } from 'lucide-react';
+import { BookMarked, Sparkles, Loader2, PlusCircle, Trash2, BrainCircuit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { fetchWordDetails } from '@/lib/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
+import { getNextReviewDate } from '@/lib/srs';
 
 const getPartOfSpeechRussian = (pos: WordType) => {
     switch (pos) {
@@ -39,7 +38,7 @@ const renderArticle = (article?: string) => {
 
 export function WordManager() {
   const [dictionary, setDictionary] = useState<Word[]>([]);
-  const [session, setSession] = useState<{type: 'learning' | 'quiz' | 'multiple-choice', words: Word[]} | null>(null);
+  const [session, setSession] = useState<{words: Word[]} | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [filter, setFilter] = useState<WordType | 'all'>('all');
   const { toast } = useToast();
@@ -89,7 +88,16 @@ export function WordManager() {
     startTransition(true);
     fetchWordDetails(wordToAdd).then(result => {
         if (result.success) {
-            const newWord: Word = { text: wordToAdd, details: result.data };
+            const newWord: Word = { 
+              text: wordToAdd, 
+              details: result.data,
+              // SRS fields
+              nextReview: new Date().toISOString(),
+              interval: 0,
+              easeFactor: 2.5,
+              repetitions: 0,
+              lastReviewed: null
+            };
             const newDictionary = [newWord, ...dictionary];
             saveDictionary(newDictionary);
             setInputValue('');
@@ -108,28 +116,22 @@ export function WordManager() {
     toast({ title: "Слово удалено", description: `"${wordText}" удалено из вашего словаря.` });
   };
   
-  const handleStartLearningSession = (words: Word[]) => {
-    if (words.length > 0) {
-      setSession({ type: 'learning', words });
-    } else {
-        toast({ title: "Нет слов для изучения", description: "Добавьте слова в эту категорию, чтобы начать изучение.", variant: "default" });
-    }
+  const handleUpdateWord = (updatedWord: Word) => {
+    const newDictionary = dictionary.map(word => 
+      word.text === updatedWord.text ? updatedWord : word
+    );
+    saveDictionary(newDictionary);
   };
   
-  const handleStartQuizSession = (words: Word[]) => {
-    const quizWords = words.filter(w => w.details.partOfSpeech === 'noun');
-    if (quizWords.length > 0) {
-      setSession({ type: 'quiz', words: quizWords });
+  const handleStartSession = (words: Word[]) => {
+    const wordsForReview = words.filter(word => new Date(word.nextReview) <= new Date());
+    
+    if (wordsForReview.length > 0) {
+      // Shuffle words to make session less predictable
+      const shuffledWords = wordsForReview.sort(() => Math.random() - 0.5);
+      setSession({ words: shuffledWords });
     } else {
-      toast({ title: "Нет слов для викторины", description: "Для викторины по артиклям нужны существительные. Добавьте их в эту категорию.", variant: "default" });
-    }
-  };
-
-  const handleStartMultipleChoiceQuiz = (words: Word[]) => {
-    if (words.length > 0) {
-      setSession({ type: 'multiple-choice', words });
-    } else {
-        toast({ title: "Нет слов для теста", description: "Добавьте слова в эту категорию, чтобы начать тест.", variant: "default" });
+        toast({ title: "Все выучено!", description: "На сегодня нет слов для повторения. Добавьте новые слова или заходите позже.", variant: "default" });
     }
   };
 
@@ -137,16 +139,13 @@ export function WordManager() {
     ? dictionary 
     : dictionary.filter(word => word.details.partOfSpeech === filter);
 
-  if (session?.type === 'learning') {
-    return <LearningSession words={session.words} onEndSession={() => setSession(null)} />;
+  if (session) {
+    return <UnifiedSession 
+      words={session.words} 
+      onEndSession={() => setSession(null)}
+      onWordUpdate={handleUpdateWord}
+    />;
   }
-  if (session?.type === 'quiz') {
-    return <QuizSession words={session.words} onEndSession={() => setSession(null)} />;
-  }
-  if (session?.type === 'multiple-choice') {
-    return <MultipleChoiceQuizSession words={session.words} onEndSession={() => setSession(null)} />;
-  }
-
 
   return (
     <div className="w-full max-w-3xl animate-in fade-in-50 space-y-8">
@@ -191,7 +190,7 @@ export function WordManager() {
                 Мой словарь
               </CardTitle>
               <CardDescription>
-                Здесь хранятся все ваши слова. Выберите режим, чтобы начать.
+                Здесь хранятся все ваши слова. Начните сессию, чтобы повторить то, что пора.
               </CardDescription>
             </div>
             <div className="w-full sm:w-auto flex flex-col sm:flex-row items-center gap-2">
@@ -210,17 +209,9 @@ export function WordManager() {
                   <SelectItem value="other">Другое</SelectItem>
                 </SelectContent>
               </Select>
-               <Button variant="outline" onClick={() => handleStartLearningSession(filteredDictionary)}>
-                 <BookOpen className="mr-2 h-4 w-4" />
-                 Карточки
-               </Button>
-               <Button onClick={() => handleStartQuizSession(filteredDictionary)}>
-                 <Lightbulb className="mr-2 h-4 w-4" />
-                 Артикли
-               </Button>
-                <Button onClick={() => handleStartMultipleChoiceQuiz(filteredDictionary)}>
-                 <FileQuestion className="mr-2 h-4 w-4" />
-                 Тест
+               <Button onClick={() => handleStartSession(filteredDictionary)}>
+                 <BrainCircuit className="mr-2 h-4 w-4" />
+                 Начать обучение
                </Button>
             </div>
           </div>
@@ -245,6 +236,10 @@ export function WordManager() {
                     <p className="text-sm text-muted-foreground">{word.details.translation}</p>
                   </div>
                   <div className="flex items-center gap-2">
+                    <div className="text-right">
+                         <p className="text-xs font-medium text-muted-foreground">Повторить:</p>
+                         <p className="text-xs">{new Date(word.nextReview).toLocaleDateString('ru-RU')}</p>
+                    </div>
                     <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteWord(word.text)}>
                       <Trash2 className="h-4 w-4" />
                       <span className="sr-only">Удалить</span>
