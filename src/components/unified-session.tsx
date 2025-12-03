@@ -27,7 +27,7 @@ type SessionView = 'loading' | 'flashcard' | 'multiple-choice' | 'article-quiz' 
 type AnswerStatus = 'unanswered' | 'correct' | 'incorrect' | 'synonym';
 type VerbPracticeType = 'perfect';
 
-type FeedbackType = IntelligentErrorCorrectionOutput | CheckRecallOutput;
+type FeedbackType = IntelligentErrorCorrectionOutput | CheckRecallOutput | null;
 
 const formatCaseName = (caseName: string): string => {
     switch (caseName) {
@@ -56,12 +56,13 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
   const [isOpen, setIsOpen] = useState(true);
   const [view, setView] = useState<SessionView>('loading');
   const [quizData, setQuizData] = useState<GenerateQuizQuestionOutput | GenerateFillInTheBlankOutput | null>(null);
-  const [feedback, setFeedback] = useState<FeedbackType | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackType>(null);
   
-  const [selectedOption, setSelectedOption] = useState<string | null>(null); // For radio/multiple choice
-  const [inputValue, setInputValue] = useState(''); // For verb practice and recall
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [inputValue, setInputValue] = useState('');
   const [answerStatus, setAnswerStatus] = useState<AnswerStatus>('unanswered');
   const [verbPracticeType, setVerbPracticeType] = useState<VerbPracticeType>('perfect');
+  const [lastQuality, setLastQuality] = useState<number | undefined>(undefined);
   
   const currentWord = useMemo(() => words[currentIndex], [words, currentIndex]);
 
@@ -110,6 +111,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     setInputValue('');
     setQuizData(null);
     setFeedback(null);
+    setLastQuality(undefined);
     
     const nextView = determineNextView(word);
 
@@ -150,10 +152,12 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     }
   }, [currentWord, loadView]);
   
-  const handleNext = useCallback((quality?: number) => {
-    // Update SRS if quality is provided (for flashcards)
-    if (quality !== undefined) {
-      const newSrsData = getNextReviewDate(currentWord, quality);
+  const handleNext = (quality?: number) => {
+    // Use the quality from the last check, or the one passed in (for flashcards)
+    const srsQuality = quality !== undefined ? quality : lastQuality;
+
+    if (srsQuality !== undefined) {
+      const newSrsData = getNextReviewDate(currentWord, srsQuality);
       onWordUpdate({ ...currentWord, ...newSrsData });
     }
 
@@ -162,7 +166,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     } else {
       handleClose();
     }
-  }, [currentIndex, words.length, currentWord, onWordUpdate]);
+  };
   
   const handlePrev = () => {
     if (currentIndex > 0) {
@@ -180,13 +184,15 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     if (!currentWord || (isInputBased && !inputValue) || (!isInputBased && !selectedOption)) return;
 
     let quality: number;
+    let feedbackData: FeedbackType = null;
+    let newStatus: AnswerStatus = 'incorrect';
 
     switch(view) {
       case 'multiple-choice': {
         const question = quizData as GenerateQuizQuestionOutput;
         const isCorrect = selectedOption === question.correctAnswer;
         quality = isCorrect ? 5 : 2;
-        setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
+        newStatus = isCorrect ? 'correct' : 'incorrect';
         break;
       }
 
@@ -198,13 +204,12 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
             expectedArticle: currentWord.details.nounDetails?.article
         });
         if (result.success) {
-            setFeedback(result.data);
+            feedbackData = result.data;
             quality = result.data.isCorrect ? 5 : 2;
-            setAnswerStatus(result.data.isCorrect ? 'correct' : 'incorrect');
+            newStatus = result.data.isCorrect ? 'correct' : 'incorrect';
         } else {
             console.error(result.error);
             quality = 1;
-            setAnswerStatus('incorrect');
         }
         break;
       }
@@ -219,13 +224,12 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
               expectedAnswer: expectedAnswer,
           });
           if (result.success) {
-              setFeedback(result.data);
+              feedbackData = result.data;
               quality = result.data.isCorrect ? 5 : 2;
-              setAnswerStatus(result.data.isCorrect ? 'correct' : 'incorrect');
+              newStatus = result.data.isCorrect ? 'correct' : 'incorrect';
           } else {
               console.error(result.error);
               quality = 1;
-              setAnswerStatus('incorrect');
           }
           break;
       }
@@ -239,13 +243,12 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
               userInput: inputValue.trim(),
           });
           if (result.success) {
-              setFeedback(result.data);
+              feedbackData = result.data;
               quality = result.data.isSynonym ? 4 : (result.data.isCorrect ? 5 : 2);
-              setAnswerStatus(result.data.isSynonym ? 'synonym' : (result.data.isCorrect ? 'correct' : 'incorrect'));
+              newStatus = result.data.isSynonym ? 'synonym' : (result.data.isCorrect ? 'correct' : 'incorrect');
           } else {
               console.error(result.error);
               quality = 1;
-              setAnswerStatus('incorrect');
           }
           break;
       }
@@ -261,13 +264,12 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
               sentenceContext: blankQuiz.sentenceWithBlank,
           });
           if (result.success) {
-              setFeedback(result.data);
+              feedbackData = result.data;
               quality = result.data.isCorrect ? 5 : 2;
-              setAnswerStatus(result.data.isCorrect ? 'correct' : 'incorrect');
+              newStatus = result.data.isCorrect ? 'correct' : 'incorrect';
           } else {
               console.error(result.error);
               quality = 1;
-              setAnswerStatus('incorrect');
           }
           break;
       }
@@ -277,8 +279,9 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
         break;
     }
     
-    const newSrsData = getNextReviewDate(currentWord, quality);
-    onWordUpdate({ ...currentWord, ...newSrsData });
+    setLastQuality(quality);
+    setFeedback(feedbackData);
+    setAnswerStatus(newStatus);
 }
 
 
@@ -320,7 +323,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     }
     
     if (view === 'article-quiz') {
-        const currentFeedback = feedback as IntelligentErrorCorrectionOutput;
+        const currentFeedback = feedback as IntelligentErrorCorrectionOutput | null;
         return (
             <Card className="border-none shadow-none">
                 <CardContent className="p-0 flex flex-col items-center gap-6">
@@ -361,7 +364,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     }
 
     if (view === 'verb-practice') {
-        const currentFeedback = feedback as IntelligentErrorCorrectionOutput;
+        const currentFeedback = feedback as IntelligentErrorCorrectionOutput | null;
         const practiceTypeText = verbPracticeType === 'perfect' ? 'Perfekt' : 'Präteritum';
         return (
              <Card className="border-none shadow-none">
@@ -395,7 +398,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     }
 
      if (view === 'recall-quiz') {
-        const currentFeedback = feedback as CheckRecallOutput;
+        const currentFeedback = feedback as CheckRecallOutput | null;
         return (
              <Card className="border-none shadow-none">
                 <CardContent className="p-0 flex flex-col items-center gap-6">
@@ -440,7 +443,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
 
     if (view === 'fill-in-the-blank') {
         const blankQuiz = quizData as GenerateFillInTheBlankOutput;
-        const currentFeedback = feedback as IntelligentErrorCorrectionOutput;
+        const currentFeedback = feedback as IntelligentErrorCorrectionOutput | null;
 
         if (!blankQuiz?.sentenceWithBlank) {
             return (
