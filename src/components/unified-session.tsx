@@ -76,12 +76,14 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
       setView('flashcard');
     } else if (nextView === 'multiple-choice') {
       const result = await fetchQuizQuestion({ word: word.text, details: word.details });
-      if (result.success) {
+      if (result.success && result.data.options.length > 0) {
         setQuizData(result.data);
         setView('multiple-choice');
       } else {
-        console.error(result.error);
-        setView('flashcard'); // Fallback to flashcard on error
+        if (!result.success) {
+          console.error(result.error);
+        }
+        setView('flashcard'); // Fallback to flashcard on error or empty options
       }
     } else if (nextView === 'article-quiz') {
       setView('article-quiz');

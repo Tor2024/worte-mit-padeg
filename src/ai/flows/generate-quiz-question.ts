@@ -82,9 +82,21 @@ const generateQuizQuestionFlow = ai.defineFlow(
     outputSchema: GenerateQuizQuestionOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
+    const { output, finishReason } = await prompt(input);
+
+    if (finishReason !== 'stop' || !output) {
+      // If the model fails to generate a valid output, return a "valid" empty-like response
+      // to prevent the app from crashing. The UI will handle this gracefully.
+      return {
+        question: 'Error',
+        questionType: 'translation',
+        options: [],
+        correctAnswer: '',
+      };
+    }
+    
     // Basic shuffle of options to ensure randomness
-    output!.options.sort(() => Math.random() - 0.5);
-    return output!;
+    output.options.sort(() => Math.random() - 0.5);
+    return output;
   }
 );
