@@ -66,6 +66,10 @@ export async function fetchFillInTheBlank(input: GenerateFillInTheBlankInput): P
 export async function fetchCaseQuiz(input: GenerateCaseQuizInput): Promise<{ success: true, data: GenerateCaseQuizOutput } | { success: false, error: string }> {
     try {
         const result = await generateCaseQuiz(input);
+        // Sometimes the AI might return an empty string for the answer if it gets confused.
+        if (!result.correctAnswer) {
+            throw new Error("AI failed to provide a correct answer for the case quiz.");
+        }
         return { success: true, data: result };
     } catch (error) {
         console.error(error);

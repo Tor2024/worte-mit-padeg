@@ -172,7 +172,6 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
     setAnswerStatus('unanswered');
     setFeedback(null);
 
-    // Read the latest stats directly instead of relying on state in dependencies
     const currentStats = getCaseStats();
     const taskParams = generateAdaptiveTask(dictionary, currentStats);
 
@@ -193,12 +192,12 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
     } else {
       console.error("Failed to generate task:", result.error);
       setGenerationError("Не удалось создать задание. AI не смог составить корректное предложение. Попробуем еще раз.");
+      // Do not automatically retry, wait for user input
     }
     setIsLoading(false);
   }, [dictionary]);
 
   useEffect(() => {
-    // This effect now runs only once when the component mounts
     loadNextTask();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -94,7 +94,6 @@ const prompt = ai.definePrompt({
   - Сравните ввод пользователя ("{{userInput}}") с ожидаемым правильным ответом ("{{expectedAnswer}}").
   - Учитывайте, что пользователь мог ввести слово в базовой форме, а требуется в измененной (например, склонение прилагательного).
   - isCorrect должен быть true, если ответ полностью совпадает (с учетом регистра).
-  - Если ответ правильный, дайте короткое подтверждающее сообщение.
   - Если ответ неправильный:
     1.  Укажите правильный ответ: "{{expectedAnswer}}".
     2.  Подробно, но понятно объясните, почему именно такая форма слова требуется в данном контексте. Ссылайтесь на падеж, род, число, время глагола и т.д.
@@ -155,6 +154,13 @@ const intelligentErrorCorrectionFlow = ai.defineFlow(
     outputSchema: IntelligentErrorCorrectionOutputSchema,
   },
   async input => {
+    // Basic pre-check to ensure the input is plausible before sending to AI
+    if (input.practiceType === 'case-quiz' && !input.userInput) {
+        return {
+            isCorrect: false,
+            explanation: "Вы не ввели слово. Пожалуйста, выберите падеж и впишите недостающее слово.",
+        };
+    }
     const {output} = await prompt(input);
     return output!;
   }
