@@ -11,7 +11,7 @@ export function Header() {
           </h1>
         </div>
         <div className="text-xs text-muted-foreground">
-          Версия 8
+          Версия 9
         </div>
       </div>
     </header>
