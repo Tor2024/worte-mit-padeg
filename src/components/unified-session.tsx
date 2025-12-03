@@ -145,9 +145,11 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     
     if (view === 'flashcard') {
         return (
-            <>
-                <LearningView word={currentWord} />
-                <div className="flex justify-around mt-4">
+            <div className="flex flex-col h-full">
+                <div className="flex-1 min-h-0">
+                    <LearningView word={currentWord} />
+                </div>
+                <div className="flex justify-around mt-4 pt-4 border-t">
                     <Button size="lg" variant="destructive" onClick={() => {
                         const newSrsData = getNextReviewDate(currentWord, 1);
                         onWordUpdate({ ...currentWord, ...newSrsData });
@@ -164,7 +166,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                         handleNext();
                     }}>Легко!</Button>
                 </div>
-            </>
+            </div>
         )
     }
     
@@ -266,6 +268,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
   }
 
   const isQuiz = view === 'multiple-choice' || view === 'article-quiz';
+  const showNextButton = view === 'flashcard' || (isQuiz && answerStatus !== 'unanswered');
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -281,32 +284,36 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
           {renderContent()}
         </div>
 
-        <DialogFooter className="p-6 bg-muted/50 border-t flex-col sm:flex-col sm:space-x-0 items-center gap-4">
-           <Progress value={progress} className="w-full h-2" />
-           <div className="flex justify-between items-center w-full">
-            <Button variant="outline" onClick={handlePrev} disabled={currentIndex === 0}>
-                <ArrowLeft className="h-4 w-4 mr-2"/>
-                Назад
-            </Button>
-            <div className="text-sm font-medium text-muted-foreground">
-                {currentIndex + 1} / {words.length}
+        {view !== 'flashcard' && (
+            <DialogFooter className="p-6 bg-muted/50 border-t flex-col sm:flex-col sm:space-x-0 items-center gap-4">
+            <Progress value={progress} className="w-full h-2" />
+            <div className="flex justify-between items-center w-full">
+                <Button variant="outline" onClick={handlePrev} disabled={currentIndex === 0}>
+                    <ArrowLeft className="h-4 w-4 mr-2"/>
+                    Назад
+                </Button>
+                <div className="text-sm font-medium text-muted-foreground">
+                    {currentIndex + 1} / {words.length}
+                </div>
+
+                {!showNextButton && (
+                    <Button onClick={handleCheck} disabled={!selectedOption}>
+                        Проверить
+                    </Button>
+                )}
+
+                {showNextButton && (
+                    <Button onClick={handleNext}>
+                        {currentIndex === words.length - 1 ? 'Завершить' : 'Далее'}
+                        <ArrowRight className="h-4 w-4 ml-2"/>
+                    </Button>
+                )}
             </div>
-
-            {isQuiz && answerStatus === 'unanswered' && (
-                <Button onClick={handleCheck} disabled={!selectedOption}>
-                    Проверить
-                </Button>
-            )}
-
-            {(view === 'flashcard' || (isQuiz && answerStatus !== 'unanswered')) && (
-                 <Button onClick={handleNext}>
-                    {currentIndex === words.length - 1 ? 'Завершить' : 'Далее'}
-                    <ArrowRight className="h-4 w-4 ml-2"/>
-                </Button>
-            )}
-           </div>
-        </DialogFooter>
+            </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );
 }
+
+    
