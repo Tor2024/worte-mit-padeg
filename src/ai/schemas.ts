@@ -74,6 +74,8 @@ export const IntelligentErrorCorrectionInputSchema = z.object({
   userInput: z.string().describe('The user input that needs to be checked.'),
   wordType: z.enum(['noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'other']).describe('The type of the word.'),
   expectedArticle: z.string().optional().describe('The expected article for nouns (der, die, das). Only applicable if wordType is noun.'),
+  practiceType: z.enum(['perfect', 'prateritum']).optional().describe('The specific verb form being practiced.'),
+  expectedAnswer: z.string().optional().describe('The expected correct answer for the practice type.'),
   knownSynonyms: z.array(z.string()).optional().describe('Known synonyms for the word, if any.'),
 });
 export type IntelligentErrorCorrectionInput = z.infer<typeof IntelligentErrorCorrectionInputSchema>;

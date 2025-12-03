@@ -12,6 +12,7 @@ import type { GenerateQuizQuestionOutput, IntelligentErrorCorrectionOutput } fro
 import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getNextReviewDate } from '@/lib/srs';
 
@@ -22,8 +23,9 @@ interface UnifiedSessionProps {
   onWordUpdate: (word: Word) => void;
 }
 
-type SessionView = 'loading' | 'flashcard' | 'multiple-choice' | 'article-quiz';
+type SessionView = 'loading' | 'flashcard' | 'multiple-choice' | 'article-quiz' | 'verb-practice';
 type AnswerStatus = 'unanswered' | 'correct' | 'incorrect';
+type VerbPracticeType = 'perfect' | 'prateritum';
 
 const formatCaseName = (caseName: string): string => {
     switch (caseName) {
@@ -41,26 +43,26 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
   const [view, setView] = useState<SessionView>('loading');
   const [quizData, setQuizData] = useState<GenerateQuizQuestionOutput | IntelligentErrorCorrectionOutput | null>(null);
   
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null); // For radio/multiple choice
+  const [inputValue, setInputValue] = useState(''); // For verb practice input
   const [answerStatus, setAnswerStatus] = useState<AnswerStatus>('unanswered');
+  const [verbPracticeType, setVerbPracticeType] = useState<VerbPracticeType>('perfect');
   
   const currentWord = useMemo(() => words[currentIndex], [words, currentIndex]);
 
   const determineNextView = useCallback((word: Word): SessionView => {
-    // New word, first time seeing it or hasn't been answered correctly yet
     if (word.repetitions < 1) {
       return 'flashcard';
     }
     
-    // It's a noun and we haven't mastered it yet (easeFactor is a proxy for mastery)
-    if (word.details.partOfSpeech === 'noun' && word.easeFactor < 2.8) {
-      // Give article quiz more often for nouns that are being learned
-      if (Math.random() > 0.4) {
-        return 'article-quiz';
-      }
+    if (word.details.partOfSpeech === 'noun' && word.easeFactor < 2.8 && Math.random() > 0.4) {
+      return 'article-quiz';
+    }
+    
+    if (word.details.partOfSpeech === 'verb' && word.easeFactor < 3.0 && Math.random() > 0.3) {
+        return 'verb-practice';
     }
 
-    // Default to a multiple choice question for variety
     return 'multiple-choice';
   }, []);
 
@@ -68,6 +70,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     setView('loading');
     setAnswerStatus('unanswered');
     setSelectedOption(null);
+    setInputValue('');
     setQuizData(null);
     
     const nextView = determineNextView(word);
@@ -87,6 +90,10 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
       }
     } else if (nextView === 'article-quiz') {
       setView('article-quiz');
+    } else if (nextView === 'verb-practice') {
+      // Randomly pick which verb form to practice
+      setVerbPracticeType(Math.random() > 0.5 ? 'perfect' : 'prateritum');
+      setView('verb-practice');
     }
   }, [determineNextView]);
 
@@ -100,7 +107,6 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     if (currentIndex < words.length - 1) {
       setCurrentIndex(prev => prev + 1);
     } else {
-      // End of session
       handleClose();
     }
   }, [currentIndex, words.length]);
@@ -117,15 +123,15 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
   };
   
   const handleCheck = async () => {
-      if (!selectedOption || !currentWord) return;
+      if (!currentWord || (view !== 'verb-practice' && !selectedOption) || (view === 'verb-practice' && !inputValue)) return;
 
       let isCorrect = false;
       
-      if (view === 'multiple-choice') {
+      if (view === 'multiple-choice' && selectedOption) {
           const question = quizData as GenerateQuizQuestionOutput;
           isCorrect = selectedOption === question.correctAnswer;
           setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
-      } else if (view === 'article-quiz') {
+      } else if (view === 'article-quiz' && selectedOption) {
           const result = await checkArticle({
               word: currentWord.text,
               userInput: selectedOption,
@@ -138,7 +144,27 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
               setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
           } else {
               console.error(result.error);
-              // Handle error? For now, just mark as incorrect.
+              setAnswerStatus('incorrect');
+          }
+      } else if (view === 'verb-practice' && inputValue) {
+          const expectedAnswer = verbPracticeType === 'perfect' 
+              ? currentWord.details.verbDetails?.perfect 
+              : currentWord.details.verbDetails?.prateritum;
+
+          const result = await checkArticle({ // re-using the same action, it's now more generic
+              word: currentWord.text,
+              userInput: inputValue.trim(),
+              wordType: 'verb',
+              practiceType: verbPracticeType,
+              expectedAnswer: expectedAnswer,
+          });
+
+          if (result.success) {
+              setQuizData(result.data);
+              isCorrect = result.data.isCorrect;
+              setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
+          } else {
+              console.error(result.error);
               setAnswerStatus('incorrect');
           }
       }
@@ -166,7 +192,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                 <div className="flex-1 min-h-0">
                     <LearningView word={currentWord} />
                 </div>
-                <div className="flex justify-around mt-4 pt-4 border-t">
+                <div className="mt-4 pt-4 border-t flex justify-around">
                     <Button size="lg" variant="destructive" onClick={() => {
                         const newSrsData = getNextReviewDate(currentWord, 1);
                         onWordUpdate({ ...currentWord, ...newSrsData });
@@ -220,6 +246,40 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                             <AlertDescription>
                                 {feedback.explanation}
                                 {feedback.hint && <p className="mt-2 text-sm"><strong>Подсказка:</strong> {feedback.hint}</p>}
+                            </AlertDescription>
+                        </Alert>
+                   )}
+                </CardContent>
+            </Card>
+        )
+    }
+
+    if (view === 'verb-practice') {
+        const feedback = quizData as IntelligentErrorCorrectionOutput;
+        const practiceTypeText = verbPracticeType === 'perfect' ? 'Perfekt' : 'Präteritum';
+        return (
+             <Card className="border-none shadow-none">
+                <CardContent className="p-0 flex flex-col items-center gap-6">
+                    <h2 className="font-headline text-2xl text-center">
+                        Напишите форму <strong>{practiceTypeText}</strong> для глагола <strong className="text-primary">{currentWord.text}</strong>
+                    </h2>
+                    <form onSubmit={(e) => { e.preventDefault(); handleCheck(); }} className="w-full">
+                        <Input 
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value)}
+                            placeholder={`например, ${verbPracticeType === 'perfect' ? 'hat gemacht' : 'machte'}`}
+                            disabled={answerStatus !== 'unanswered'}
+                            className="text-center text-lg h-12"
+                            autoFocus
+                        />
+                    </form>
+
+                     {answerStatus !== 'unanswered' && feedback && (
+                        <Alert variant={answerStatus === 'correct' ? 'default' : 'destructive'} className="animate-in fade-in-50 w-full">
+                            {answerStatus === 'correct' ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                            <AlertTitle>{answerStatus === 'correct' ? 'Правильно!' : 'Не совсем'}</AlertTitle>
+                            <AlertDescription>
+                                {feedback.explanation}
                             </AlertDescription>
                         </Alert>
                    )}
@@ -293,7 +353,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     return null;
   }
 
-  const isQuiz = view === 'multiple-choice' || view === 'article-quiz';
+  const isQuiz = view === 'multiple-choice' || view === 'article-quiz' || view === 'verb-practice';
   const showNextButton = !isQuiz || (isQuiz && answerStatus !== 'unanswered');
 
   return (
@@ -323,7 +383,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
             </div>
 
             {!showNextButton && (
-                <Button onClick={handleCheck} disabled={!selectedOption}>
+                <Button onClick={handleCheck} disabled={view !== 'verb-practice' ? !selectedOption : !inputValue}>
                     Проверить
                 </Button>
             )}
