@@ -1,7 +1,7 @@
 'use server';
 
-import { getWordDetails, provideIntelligentErrorCorrection, generateQuizQuestion, practiceAdjectiveDeclension, checkRecallAnswer as checkRecallAnswerFlow, generateFillInTheBlank } from '@/ai/flows';
-import type { WordDetailsOutput, IntelligentErrorCorrectionInput, IntelligentErrorCorrectionOutput, GenerateQuizQuestionInput, GenerateQuizQuestionOutput, AdjectivePracticeInput, AdjectivePracticeOutput, CheckRecallInput, CheckRecallOutput, GenerateFillInTheBlankInput, GenerateFillInTheBlankOutput } from '@/ai/schemas';
+import { getWordDetails, provideIntelligentErrorCorrection, generateQuizQuestion, practiceAdjectiveDeclension, checkRecallAnswer as checkRecallAnswerFlow, generateFillInTheBlank, generateCaseQuiz } from '@/ai/flows';
+import type { WordDetailsOutput, IntelligentErrorCorrectionInput, IntelligentErrorCorrectionOutput, GenerateQuizQuestionInput, GenerateQuizQuestionOutput, AdjectivePracticeInput, AdjectivePracticeOutput, CheckRecallInput, CheckRecallOutput, GenerateFillInTheBlankInput, GenerateFillInTheBlankOutput, GenerateCaseQuizInput, GenerateCaseQuizOutput } from '@/ai/schemas';
 
 export async function fetchWordDetails(word: string, partOfSpeech?: any): Promise<{ success: true, data: WordDetailsOutput } | { success: false, error: string }> {
   try {
@@ -60,5 +60,15 @@ export async function fetchFillInTheBlank(input: GenerateFillInTheBlankInput): P
     } catch (error) {
         console.error(error);
         return { success: false, error: 'Не удалось создать упражнение "Заполните пропуск".' };
+    }
+}
+
+export async function fetchCaseQuiz(input: GenerateCaseQuizInput): Promise<{ success: true, data: GenerateCaseQuizOutput } | { success: false, error: string }> {
+    try {
+        const result = await generateCaseQuiz(input);
+        return { success: true, data: result };
+    } catch (error) {
+        console.error(error);
+        return { success: false, error: 'Не удалось создать викторину по падежам.' };
     }
 }

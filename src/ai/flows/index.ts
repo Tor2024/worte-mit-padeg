@@ -4,3 +4,4 @@ export * from './generate-quiz-question';
 export * from './practice-adjective-declension';
 export * from './check-recall-answer';
 export * from './generate-fill-in-the-blank';
+export * from './generate-case-quiz';

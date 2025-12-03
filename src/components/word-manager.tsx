@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react';
 import { Word, WordType } from '@/lib/types';
 import { UnifiedSession } from '@/components/unified-session';
 import { AdjectiveTrainer } from '@/components/adjective-trainer';
+import { CaseTrainer } from '@/components/case-trainer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { BookMarked, Sparkles, Loader2, PlusCircle, Trash2, BrainCircuit, WandSparkles } from 'lucide-react';
+import { BookMarked, Sparkles, Loader2, PlusCircle, Trash2, BrainCircuit, WandSparkles, CaseSensitive } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { fetchWordDetails } from '@/lib/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -41,6 +42,7 @@ export function WordManager() {
   const [dictionary, setDictionary] = useState<Word[]>([]);
   const [session, setSession] = useState<{words: Word[]} | null>(null);
   const [adjectiveTrainerActive, setAdjectiveTrainerActive] = useState(false);
+  const [caseTrainerActive, setCaseTrainerActive] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [filter, setFilter] = useState<WordType | 'all'>('all');
   const { toast } = useToast();
@@ -168,6 +170,17 @@ export function WordManager() {
     }
   };
 
+  const handleStartCaseTrainer = () => {
+    const nouns = dictionary.filter(w => w.details.partOfSpeech === 'noun');
+    const prepositions = dictionary.filter(w => w.details.partOfSpeech === 'preposition');
+    if (nouns.length > 0 && prepositions.length > 0) {
+      setCaseTrainerActive(true);
+    } else {
+      toast({ title: "Недостаточно слов", description: "Для тренажера падежей нужен хотя бы 1 существительное и 1 предлог в словаре.", variant: "default", duration: 5000 });
+    }
+  };
+
+
   const filteredDictionary = filter === 'all' 
     ? dictionary 
     : dictionary.filter(word => word.details.partOfSpeech === filter);
@@ -184,6 +197,13 @@ export function WordManager() {
     return <AdjectiveTrainer 
       dictionary={dictionary} 
       onEndSession={() => setAdjectiveTrainerActive(false)}
+    />;
+  }
+
+  if (caseTrainerActive) {
+    return <CaseTrainer 
+      dictionary={dictionary} 
+      onEndSession={() => setCaseTrainerActive(false)}
     />;
   }
 
@@ -273,10 +293,14 @@ export function WordManager() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <Button onClick={handleStartAdjectiveTrainer} variant="outline" className="w-full">
               <WandSparkles className="mr-2 h-4 w-4 text-accent"/>
               Тренажер прилагательных
+            </Button>
+            <Button onClick={handleStartCaseTrainer} variant="outline" className="w-full">
+                <CaseSensitive className="mr-2 h-4 w-4 text-accent"/>
+                Тренажер падежей
             </Button>
           </div>
           {dictionary.length === 0 ? (
