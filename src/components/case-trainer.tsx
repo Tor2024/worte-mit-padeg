@@ -65,38 +65,8 @@ const saveCaseStats = (stats: CaseStats) => {
   }
 };
 
-
-export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
-  const [isOpen, setIsOpen] = useState(true);
-  const [task, setTask] = useState<Task | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [generationError, setGenerationError] = useState<string | null>(null);
-  const [inputValue, setInputValue] = useState('');
-  const [selectedCase, setSelectedCase] = useState<string | undefined>(undefined);
-  const [answerStatus, setAnswerStatus] = useState<AnswerStatus>('unanswered');
-  const [feedback, setFeedback] = useState<IntelligentErrorCorrectionOutput | null>(null);
-  const [caseStats, setCaseStats] = useState<CaseStats>(INITIAL_STATS);
-  const { toast } = useToast();
-
-  useEffect(() => {
-      setCaseStats(getCaseStats());
-  }, []);
-
-  const updateCaseStats = (caseName: CaseName, isCorrect: boolean) => {
-    setCaseStats(prevStats => {
-        const newStats = { ...prevStats };
-        if (isCorrect) {
-          newStats[caseName].correct++;
-        } else {
-          newStats[caseName].incorrect++;
-        }
-        saveCaseStats(newStats);
-        return newStats;
-    });
-  };
-  
-  // Helper function to generate a task with adaptive difficulty
-  const generateAdaptiveTask = useCallback((dictionary: Word[], currentStats: CaseStats): { noun: string; preposition: string } | null => {
+// This function is now outside the component to prevent it from being recreated on every render.
+const generateAdaptiveTask = (dictionary: Word[], currentStats: CaseStats): { noun: string; preposition: string } | null => {
     const nouns = dictionary.filter(w => w.details.partOfSpeech === 'noun' && w.details.nounDetails);
     const prepositions = dictionary.filter(w => w.details.partOfSpeech === 'preposition' && w.details.prepositionDetails);
 
@@ -162,8 +132,37 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
       noun: nounWord.text,
       preposition: prepWord.text,
     };
+};
+
+export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
+  const [isOpen, setIsOpen] = useState(true);
+  const [task, setTask] = useState<Task | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [inputValue, setInputValue] = useState('');
+  const [selectedCase, setSelectedCase] = useState<string | undefined>(undefined);
+  const [answerStatus, setAnswerStatus] = useState<AnswerStatus>('unanswered');
+  const [feedback, setFeedback] = useState<IntelligentErrorCorrectionOutput | null>(null);
+  const [caseStats, setCaseStats] = useState<CaseStats>(INITIAL_STATS);
+  const { toast } = useToast();
+
+  useEffect(() => {
+      setCaseStats(getCaseStats());
   }, []);
 
+  const updateCaseStats = (caseName: CaseName, isCorrect: boolean) => {
+    setCaseStats(prevStats => {
+        const newStats = { ...prevStats };
+        if (isCorrect) {
+          newStats[caseName].correct++;
+        } else {
+          newStats[caseName].incorrect++;
+        }
+        saveCaseStats(newStats);
+        return newStats;
+    });
+  };
+  
   const loadNextTask = useCallback(async () => {
     setIsLoading(true);
     setGenerationError(null);
@@ -173,7 +172,10 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
     setAnswerStatus('unanswered');
     setFeedback(null);
 
-    const taskParams = generateAdaptiveTask(dictionary, caseStats);
+    // Read the latest stats directly instead of relying on state in dependencies
+    const currentStats = getCaseStats();
+    const taskParams = generateAdaptiveTask(dictionary, currentStats);
+
     if (!taskParams) {
       setGenerationError("Для этого упражнения вам нужны как минимум одно существительное и один предлог в словаре.");
       setIsLoading(false);
@@ -193,7 +195,7 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
       setGenerationError("Не удалось создать задание. AI не смог составить корректное предложение. Попробуем еще раз.");
     }
     setIsLoading(false);
-  }, [dictionary, caseStats, generateAdaptiveTask]);
+  }, [dictionary]);
 
   useEffect(() => {
     // This effect now runs only once when the component mounts
