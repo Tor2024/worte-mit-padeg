@@ -39,7 +39,7 @@ const WordDetailsOutputSchema = z.object({
     .describe('Details specific to nouns.'),
   verbDetails: z
     .object({
-      presentTense: z.string().describe('The verb conjugation in the present tense (e.g., "ich gehe, du gehst...").'),
+      presentTense: z.string().describe('The full verb conjugation in the present tense for all persons (ich, du, er/sie/es, wir, ihr, sie/Sie), formatted for readability.'),
       perfect: z.string().describe('The perfect tense form (e.g., "ist gegangen").')
     })
     .optional()
@@ -73,7 +73,7 @@ For the given German word or phrase "{{wordOrPhrase}}", provide a comprehensive 
 1.  **translation**: Provide the primary Russian translation.
 2.  **partOfSpeech**: Determine the correct part of speech.
 3.  **nounDetails**: If it's a noun, provide its article ('der', 'die', or 'das') and its plural form.
-4.  **verbDetails**: If it's a verb, provide its present tense conjugation for 'ich, du, er/sie/es' and its perfect tense form.
+4.  **verbDetails**: If it's a verb, provide its full present tense conjugation for all persons (ich, du, er/sie/es, wir, ihr, sie/Sie) and its perfect tense form. Format the present tense conjugation clearly, with each person on a new line.
 5.  **prepositionDetails**: If it's a preposition, specify the case it governs (e.g., 'Akkusativ', 'Dativ', 'Genitiv', or 'Wechselpräposition' if it's a two-way preposition).
 6.  **examples**: Provide three distinct and useful example sentences. Each example must have both the German sentence and its accurate Russian translation.
 
