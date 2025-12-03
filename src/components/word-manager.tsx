@@ -264,6 +264,9 @@ export function WordManager() {
               <CardTitle className="font-headline text-2xl flex items-center gap-2">
                 <BookMarked className="h-6 w-6 text-primary" />
                 Мой словарь
+                {dictionary.length > 0 && (
+                    <Badge variant="secondary">{dictionary.length}</Badge>
+                )}
               </CardTitle>
               <CardDescription>
                 Здесь хранятся все ваши слова. Начните сессию, чтобы повторить то, что пора.
