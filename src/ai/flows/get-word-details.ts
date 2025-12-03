@@ -66,6 +66,7 @@ For the given German word or phrase "{{wordOrPhrase}}", provide a comprehensive 
     - **Crucially, each example must use the exact word "{{wordOrPhrase}}" and not a related word with a prefix (like 'mitbringen' for 'bringen').**
     - Each example must have both the German sentence and its accurate Russian translation.
     - If the word is a verb, one of the three examples must show its usage in the perfect tense.
+    - **CRITICAL**: When generating example sentences, always use common contractions of prepositions with articles (e.g., im, am, zum, zur, vom) where appropriate to make the language sound more natural. For example, instead of "Ich gehe in dem Park", write "Ich gehe im Park".
 
 Your response must be a valid JSON object matching the output schema.
 `,
