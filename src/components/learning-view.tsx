@@ -68,7 +68,7 @@ export function LearningView({ word }: LearningViewProps) {
               <div className="space-y-4 text-sm mt-4">
                 {partOfSpeech === 'noun' && nounDetails && (
                   <>
-                    <p><span className="font-semibold text-muted-foreground">Мн. число:</span> {nounDetails.plural}</p>
+                    <p><span className="font-semibold text-muted-foreground">Мн. число:</span> {renderArticle('die')} {nounDetails.plural}</p>
                   </>
                 )}
                 {partOfSpeech === 'verb' && verbDetails && (
