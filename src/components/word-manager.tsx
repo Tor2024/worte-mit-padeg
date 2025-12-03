@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react';
 import type { Word, WordType } from '@/lib/types';
 import { LearningSession } from '@/components/learning-session';
+import { QuizSession } from '@/components/quiz-session';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { BookMarked, Sparkles, Loader2, PlusCircle, Trash2, BookOpen, Play } from 'lucide-react';
+import { BookMarked, Sparkles, Loader2, PlusCircle, Trash2, BookOpen, Lightbulb } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { fetchWordDetails } from '@/lib/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -36,7 +37,7 @@ const renderArticle = (article?: string) => {
 
 export function WordManager() {
   const [dictionary, setDictionary] = useState<Word[]>([]);
-  const [learningSessionWords, setLearningSessionWords] = useState<Word[] | null>(null);
+  const [session, setSession] = useState<{type: 'learning' | 'quiz', words: Word[]} | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [filter, setFilter] = useState<WordType | 'all'>('all');
   const { toast } = useToast();
@@ -105,11 +106,20 @@ export function WordManager() {
     toast({ title: "Слово удалено", description: `"${wordText}" удалено из вашего словаря.` });
   };
   
-  const handleStartSession = (words: Word[]) => {
+  const handleStartLearningSession = (words: Word[]) => {
     if (words.length > 0) {
-      setLearningSessionWords(words);
+      setSession({ type: 'learning', words });
     } else {
         toast({ title: "Нет слов для изучения", description: "Добавьте слова в эту категорию, чтобы начать изучение.", variant: "default" });
+    }
+  };
+  
+  const handleStartQuizSession = (words: Word[]) => {
+    const quizWords = words.filter(w => w.details.partOfSpeech === 'noun');
+    if (quizWords.length > 0) {
+      setSession({ type: 'quiz', words: quizWords });
+    } else {
+      toast({ title: "Нет слов для викторины", description: "Для викторины по артиклям нужны существительные. Добавьте их в эту категорию.", variant: "default" });
     }
   };
 
@@ -117,8 +127,11 @@ export function WordManager() {
     ? dictionary 
     : dictionary.filter(word => word.details.partOfSpeech === filter);
 
-  if (learningSessionWords) {
-    return <LearningSession words={learningSessionWords} onEndSession={() => setLearningSessionWords(null)} />;
+  if (session?.type === 'learning') {
+    return <LearningSession words={session.words} onEndSession={() => setSession(null)} />;
+  }
+  if (session?.type === 'quiz') {
+    return <QuizSession words={session.words} onEndSession={() => setSession(null)} />;
   }
 
   return (
@@ -164,10 +177,10 @@ export function WordManager() {
                 Мой словарь
               </CardTitle>
               <CardDescription>
-                Здесь хранятся все ваши слова. Нажмите "Начать изучение", чтобы запустить тренажер.
+                Здесь хранятся все ваши слова. Выберите режим, чтобы начать.
               </CardDescription>
             </div>
-            <div className="w-full sm:w-auto flex items-center gap-2">
+            <div className="w-full sm:w-auto flex flex-col sm:flex-row items-center gap-2">
               <Select value={filter} onValueChange={(value) => setFilter(value as any)}>
                 <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="Фильтр по части речи" />
@@ -182,9 +195,13 @@ export function WordManager() {
                   <SelectItem value="other">Другое</SelectItem>
                 </SelectContent>
               </Select>
-               <Button onClick={() => handleStartSession(filteredDictionary)}>
-                 <Play className="mr-2 h-4 w-4" />
-                 Начать изучение
+               <Button variant="outline" onClick={() => handleStartLearningSession(filteredDictionary)}>
+                 <BookOpen className="mr-2 h-4 w-4" />
+                 Карточки
+               </Button>
+               <Button onClick={() => handleStartQuizSession(filteredDictionary)}>
+                 <Lightbulb className="mr-2 h-4 w-4" />
+                 Викторина
                </Button>
             </div>
           </div>
