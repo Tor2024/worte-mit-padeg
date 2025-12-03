@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { Word } from '@/lib/types';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -57,15 +57,15 @@ export function LearningView({ word }: LearningViewProps) {
         {/* Front of the card */}
         <div className="absolute w-full h-full backface-hidden flex flex-col justify-between p-6">
           <div className="flex-1 flex flex-col min-h-0">
-            <div className="flex justify-between items-start">
-              <h2 className="font-headline text-4xl mb-2">
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="font-headline text-4xl">
                 {renderArticle(nounDetails?.article)}{' '}{word.text}
               </h2>
               <Badge variant="outline">{getPartOfSpeechRussian(partOfSpeech)}</Badge>
             </div>
 
             <ScrollArea className="flex-1 pr-4 -mr-4">
-              <div className="space-y-4 text-sm mt-4">
+              <div className="space-y-4 text-sm">
                 {partOfSpeech === 'noun' && nounDetails && (
                   <>
                     <p><span className="font-semibold text-muted-foreground">Мн. число:</span> {renderArticle('die')} {nounDetails.plural}</p>
@@ -89,7 +89,7 @@ export function LearningView({ word }: LearningViewProps) {
               </div>
             </ScrollArea>
           </div>
-          <div className="text-center text-muted-foreground text-sm mt-4">
+          <div className="text-center text-muted-foreground text-sm mt-4 pt-4 border-t">
             <RefreshCw className="inline-block mr-2 h-4 w-4" />
             Нажмите, чтобы перевернуть
           </div>
@@ -102,7 +102,7 @@ export function LearningView({ word }: LearningViewProps) {
               <div className="flex-1 space-y-2 min-h-0">
                   <h3 className="font-semibold text-secondary-foreground">Примеры:</h3>
                    <ScrollArea className="h-full pr-4 -mr-4">
-                      <ul className="space-y-2 text-sm">
+                      <ul className="space-y-3 text-sm">
                           {examples.map((ex, i) => (
                               <li key={i}>
                                   <p className="text-secondary-foreground">{ex.german}</p>
@@ -113,7 +113,7 @@ export function LearningView({ word }: LearningViewProps) {
                    </ScrollArea>
               </div>
           </div>
-           <div className="text-center text-muted-foreground text-sm mt-4">
+           <div className="text-center text-muted-foreground text-sm mt-4 pt-4 border-t">
              <RefreshCw className="inline-block mr-2 h-4 w-4" />
             Нажмите, чтобы перевернуть
           </div>
