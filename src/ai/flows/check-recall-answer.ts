@@ -56,10 +56,10 @@ The student was asked to translate the Russian word "{{russianWord}}" into Germa
 
 - \`isCorrect\`: \`true\` if the answer is a direct match OR a valid synonym.
 - \`isSynonym\`: \`true\` ONLY if it's a valid synonym, otherwise \`false\`.
-- \`correctAnswer\`: Always provide the original, exact expected answer (e.g., "{{article}} {{germanWord}}").
+- \`correctAnswer\`: Always provide the original, exact expected answer (e.g., "{{article}} {{germanWord}}" or just "{{germanWord}}").
 - \`explanation\`: Provide a clear explanation in Russian based on the evaluation steps.
     - Correct match: "Отлично! Все верно."
-    - Synonym: "Тоже правильно! '{{userInput}}' — хороший синоним для '{{germanWord}}'. Основной ответ был '{{correctAnswer}}'."
+    - Synonym: "Тоже правильно! '{{userInput}}' — хороший синоним для '{{germanWord}}'."
     - Incorrect: "Не совсем верно. Правильный ответ: '{{correctAnswer}}'. [Your brief explanation of the error]."
 
 **Example (Correct):**
@@ -68,7 +68,7 @@ The student was asked to translate the Russian word "{{russianWord}}" into Germa
 
 **Example (Synonym):**
 - Input: { russianWord: "поэтому", germanWord: "deshalb", userInput: "darum" }
-- Output: { "isCorrect": true, "isSynonym": true, "correctAnswer": "deshalb", "explanation": "Тоже правильно! 'darum' — хороший синоним для 'deshalb'. Основной ответ был 'deshalb'." }
+- Output: { "isCorrect": true, "isSynonym": true, "correctAnswer": "deshalb", "explanation": "Тоже правильно! 'darum' — хороший синоним для 'deshalb'." }
 
 **Example (Incorrect):**
 - Input: { russianWord: "стул", germanWord: "Stuhl", article: "der", userInput: "das Stuhl" }
@@ -83,6 +83,8 @@ const checkRecallAnswerFlow = ai.defineFlow(
     outputSchema: CheckRecallOutputSchema,
   },
   async (input) => {
+    const correctAnswer = input.article ? `${input.article} ${input.germanWord}` : input.germanWord;
+    
     // Pre-process user input for nouns to ensure it contains an article if expected
     if (input.partOfSpeech === 'noun' && input.article) {
         if (!/^(der|die|das)\s/i.test(input.userInput)) {
@@ -90,12 +92,17 @@ const checkRecallAnswerFlow = ai.defineFlow(
             return {
                 isCorrect: false,
                 isSynonym: false,
-                correctAnswer: `${input.article} ${input.germanWord}`,
-                explanation: `Неверно. Для существительных нужно указывать артикль. Правильный ответ: "${input.article} ${input.germanWord}".`
+                correctAnswer: correctAnswer,
+                explanation: `Неверно. Для существительных нужно указывать артикль. Правильный ответ: "${correctAnswer}".`
             }
         }
     }
-    const { output } = await prompt(input);
+    const { output } = await prompt({...input, correctAnswer });
+    if (output) {
+      output.correctAnswer = correctAnswer;
+    }
     return output!;
   }
 );
+
+    

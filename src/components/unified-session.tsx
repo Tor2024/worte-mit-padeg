@@ -27,6 +27,8 @@ type SessionView = 'loading' | 'flashcard' | 'multiple-choice' | 'article-quiz' 
 type AnswerStatus = 'unanswered' | 'correct' | 'incorrect' | 'synonym';
 type VerbPracticeType = 'perfect';
 
+type FeedbackType = IntelligentErrorCorrectionOutput | CheckRecallOutput;
+
 const formatCaseName = (caseName: string): string => {
     switch (caseName) {
         case 'Akkusativ': return 'Винительный падеж (Akkusativ)';
@@ -53,7 +55,8 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isOpen, setIsOpen] = useState(true);
   const [view, setView] = useState<SessionView>('loading');
-  const [quizData, setQuizData] = useState<GenerateQuizQuestionOutput | IntelligentErrorCorrectionOutput | CheckRecallOutput | GenerateFillInTheBlankOutput | null>(null);
+  const [quizData, setQuizData] = useState<GenerateQuizQuestionOutput | GenerateFillInTheBlankOutput | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackType | null>(null);
   
   const [selectedOption, setSelectedOption] = useState<string | null>(null); // For radio/multiple choice
   const [inputValue, setInputValue] = useState(''); // For verb practice and recall
@@ -106,6 +109,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     setSelectedOption(null);
     setInputValue('');
     setQuizData(null);
+    setFeedback(null);
     
     const nextView = determineNextView(word);
 
@@ -194,7 +198,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
               expectedArticle: currentWord.details.nounDetails?.article
           });
           if (result.success) {
-              setQuizData(result.data);
+              setFeedback(result.data);
               isCorrect = result.data.isCorrect;
               setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
           } else {
@@ -212,7 +216,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                 expectedAnswer: expectedAnswer,
             });
             if (result.success) {
-                setQuizData(result.data);
+                setFeedback(result.data);
                 isCorrect = result.data.isCorrect;
                 setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
             } else {
@@ -229,7 +233,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                 userInput: inputValue.trim(),
             });
             if (result.success) {
-                setQuizData(result.data);
+                setFeedback(result.data);
                 isCorrect = result.data.isCorrect;
                 isSynonym = result.data.isSynonym;
                 setAnswerStatus(isSynonym ? 'synonym' : (isCorrect ? 'correct' : 'incorrect'));
@@ -249,7 +253,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                 sentenceContext: blankQuiz.sentenceWithBlank,
             });
             if (result.success) {
-                setQuizData(result.data);
+                setFeedback(result.data);
                 isCorrect = result.data.isCorrect;
                 setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
             } else {
@@ -301,7 +305,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     }
     
     if (view === 'article-quiz') {
-        const feedback = quizData as IntelligentErrorCorrectionOutput;
+        const currentFeedback = feedback as IntelligentErrorCorrectionOutput;
         return (
             <Card className="border-none shadow-none">
                 <CardContent className="p-0 flex flex-col items-center gap-6">
@@ -326,13 +330,13 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                        </div>
                    </RadioGroup>
 
-                   {answerStatus !== 'unanswered' && feedback && (
+                   {answerStatus !== 'unanswered' && currentFeedback && (
                         <Alert variant={answerStatus === 'correct' ? 'default' : 'destructive'} className="animate-in fade-in-50">
                             {answerStatus === 'correct' ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
                             <AlertTitle>{answerStatus === 'correct' ? 'Правильно!' : 'Не совсем'}</AlertTitle>
                             <AlertDescription>
-                                {feedback.explanation}
-                                {feedback.hint && <p className="mt-2 text-sm"><strong>Подсказка:</strong> {feedback.hint}</p>}
+                                {currentFeedback.explanation}
+                                {currentFeedback.hint && <p className="mt-2 text-sm"><strong>Подсказка:</strong> {currentFeedback.hint}</p>}
                             </AlertDescription>
                         </Alert>
                    )}
@@ -342,7 +346,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     }
 
     if (view === 'verb-practice') {
-        const feedback = quizData as IntelligentErrorCorrectionOutput;
+        const currentFeedback = feedback as IntelligentErrorCorrectionOutput;
         const practiceTypeText = verbPracticeType === 'perfect' ? 'Perfekt' : 'Präteritum';
         return (
              <Card className="border-none shadow-none">
@@ -361,12 +365,12 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                         />
                     </form>
 
-                     {answerStatus !== 'unanswered' && feedback && (
+                     {answerStatus !== 'unanswered' && currentFeedback && (
                         <Alert variant={answerStatus === 'correct' ? 'default' : 'destructive'} className="animate-in fade-in-50 w-full">
                             {answerStatus === 'correct' ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
                             <AlertTitle>{answerStatus === 'correct' ? 'Правильно!' : 'Не совсем'}</AlertTitle>
                             <AlertDescription>
-                                {feedback.explanation}
+                                {currentFeedback.explanation}
                             </AlertDescription>
                         </Alert>
                    )}
@@ -376,7 +380,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     }
 
      if (view === 'recall-quiz') {
-        const feedback = quizData as CheckRecallOutput;
+        const currentFeedback = feedback as CheckRecallOutput;
         return (
              <Card className="border-none shadow-none">
                 <CardContent className="p-0 flex flex-col items-center gap-6">
@@ -398,7 +402,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                         />
                     </form>
 
-                     {answerStatus !== 'unanswered' && feedback && (
+                     {answerStatus !== 'unanswered' && currentFeedback && (
                         <Alert variant={answerStatus === 'incorrect' ? 'destructive' : 'default'} className="animate-in fade-in-50 w-full">
                             {answerStatus === 'correct' ? <Check className="h-4 w-4" /> : (answerStatus === 'synonym' ? <RefreshCw className="h-4 w-4"/> : <X className="h-4 w-4" />) }
                             <AlertTitle>
@@ -407,7 +411,10 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                               {answerStatus === 'synonym' && 'Тоже верно!'}
                             </AlertTitle>
                             <AlertDescription>
-                                <p>{feedback.explanation}</p>
+                                <p>{currentFeedback.explanation}</p>
+                                {answerStatus !== 'incorrect' && (
+                                    <p className="text-xs mt-2">Основной ответ: <strong>{currentFeedback.correctAnswer}</strong></p>
+                                )}
                             </AlertDescription>
                         </Alert>
                    )}
@@ -418,7 +425,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
 
     if (view === 'fill-in-the-blank') {
         const blankQuiz = quizData as GenerateFillInTheBlankOutput;
-        const feedback = quizData as IntelligentErrorCorrectionOutput;
+        const currentFeedback = feedback as IntelligentErrorCorrectionOutput;
 
         if (!blankQuiz?.sentenceWithBlank) {
             return (
@@ -451,12 +458,12 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                         />
                     </form>
 
-                     {answerStatus !== 'unanswered' && feedback.explanation && (
+                     {answerStatus !== 'unanswered' && currentFeedback && (
                         <Alert variant={answerStatus === 'correct' ? 'default' : 'destructive'} className="animate-in fade-in-50 w-full">
                             {answerStatus === 'correct' ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
                             <AlertTitle>{answerStatus === 'correct' ? 'Правильно!' : 'Не совсем'}</AlertTitle>
                             <AlertDescription>
-                                <p>{feedback.explanation}</p>
+                                <p>{currentFeedback.explanation}</p>
                             </AlertDescription>
                         </Alert>
                    )}
@@ -579,3 +586,5 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     </Dialog>
   );
 }
+
+    
