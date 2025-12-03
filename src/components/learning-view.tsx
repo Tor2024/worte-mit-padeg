@@ -46,7 +46,7 @@ export function LearningView({ word }: LearningViewProps) {
     }
   }
 
-  const DetailItem = ({ label, value }: { label: string, value?: string | React.ReactNode }) => {
+  const DetailItem = ({ label, value }: { label: string, value?: string | React.ReactNode | null }) => {
     if (!value) return null;
     return <p><span className="font-semibold text-muted-foreground">{label}:</span> {value}</p>;
   }

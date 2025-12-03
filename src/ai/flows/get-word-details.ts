@@ -51,7 +51,7 @@ For the given German word or phrase "{{wordOrPhrase}}", provide a comprehensive 
 6.  **prepositionDetails**: If it's a preposition:
     - **case**: Specify the case it governs ('Akkusativ', 'Dativ', 'Genitiv', or 'Wechselpräposition').
     - **dualCaseExplanation**: For 'Wechselpräposition', provide a clear explanation: "Akkusativ (куда?) / Dativ (где?)".
-    - **commonContractions**: List common contractions with articles (e.g., "in + dem = im, an + das = ans").
+    - **commonContractions**: List common contractions with articles (e.g., "in + dem = im, an + das = ans"). If there are none, return null for this field.
 
 7.  **conjunctionDetails**: If it's a conjunction, specify the verb position it leads to ('secondPosition' or 'endOfSentence').
 
