@@ -33,8 +33,6 @@ export const WordDetailsOutputSchema = z.object({
     .object({
       presentTense: z.string().describe('The full verb conjugation in the present tense for all persons (ich, du, er/sie/es, wir, ihr, sie/Sie), formatted for readability.'),
       perfect: z.string().describe('The perfect tense form (e.g., "ist gegangen").'),
-      prateritum: z.string().describe('The full verb conjugation in the Präteritum (simple past) tense for all persons, formatted for readability.'),
-      futurI: z.string().describe('The full verb conjugation in the Futur I (future) tense for all persons, formatted for readability.'),
       verbGovernment: z.string().optional().describe('The case the verb governs or the preposition it is used with, explained in Russian (e.g., "warten auf + Akkusativ (ждать кого-то/что-то)").'),
       isReflexive: z.boolean().optional().describe('Whether the verb is reflexive (used with "sich").'),
     })
@@ -76,7 +74,7 @@ export const IntelligentErrorCorrectionInputSchema = z.object({
   userInput: z.string().describe('The user input that needs to be checked.'),
   wordType: z.enum(['noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'other']).describe('The type of the word.'),
   expectedArticle: z.string().optional().describe('The expected article for nouns (der, die, das). Only applicable if wordType is noun.'),
-  practiceType: z.enum(['perfect', 'prateritum', 'fill-in-the-blank', 'case-quiz']).optional().describe('The specific verb form being practiced.'),
+  practiceType: z.enum(['perfect', 'fill-in-the-blank', 'case-quiz']).optional().describe('The specific verb form being practiced.'),
   expectedAnswer: z.string().optional().describe('The expected correct answer for the practice type.'),
   knownSynonyms: z.array(z.string()).optional().describe('Known synonyms for the word, if any.'),
   sentenceContext: z.string().optional().describe('The sentence in which the word was used, with a blank for the word. For fill-in-the-blank checks.'),
@@ -174,9 +172,9 @@ export const GenerateCaseQuizInputSchema = z.object({
 export type GenerateCaseQuizInput = z.infer<typeof GenerateCaseQuizInputSchema>;
 
 export const GenerateCaseQuizOutputSchema = z.object({
-    sentence: z.string().describe('The German sentence with a blank for the article/phrase, e.g., "Ich gehe in ____ Park."'),
+    sentence: z.string().describe('The German sentence with a blank for the article, e.g., "Ich gehe in ____ Park."'),
     russianTranslation: z.string().describe('The Russian translation of the full sentence for context.'),
     correctCase: z.enum(['Nominativ', 'Akkusativ', 'Dativ', 'Genitiv']).describe('The correct case required by the preposition in this context.'),
-    correctAnswer: z.string().describe('The correct word(s) that fill the blank, e.g., "den".'),
+    correctAnswer: z.string().describe('The correct article that fills the blank, e.g., "den".'),
 });
 export type GenerateCaseQuizOutput = z.infer<typeof GenerateCaseQuizOutputSchema>;

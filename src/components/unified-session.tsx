@@ -25,7 +25,7 @@ interface UnifiedSessionProps {
 
 type SessionView = 'loading' | 'flashcard' | 'multiple-choice' | 'article-quiz' | 'verb-practice' | 'recall-quiz' | 'fill-in-the-blank';
 type AnswerStatus = 'unanswered' | 'correct' | 'incorrect' | 'synonym';
-type VerbPracticeType = 'perfect' | 'prateritum';
+type VerbPracticeType = 'perfect';
 
 const formatCaseName = (caseName: string): string => {
     switch (caseName) {
@@ -123,7 +123,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     } else if (nextView === 'article-quiz') {
       setView('article-quiz');
     } else if (nextView === 'verb-practice') {
-      setVerbPracticeType(Math.random() > 0.5 ? 'perfect' : 'prateritum');
+      setVerbPracticeType('perfect');
       setView('verb-practice');
     } else if (nextView === 'recall-quiz') {
       setView('recall-quiz');
@@ -203,9 +203,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
           break;
         
         case 'verb-practice':
-            const expectedAnswer = verbPracticeType === 'perfect' 
-                ? currentWord.details.verbDetails?.perfect 
-                : currentWord.details.verbDetails?.prateritum;
+            const expectedAnswer = currentWord.details.verbDetails?.perfect;
             result = await checkAnswer({
                 word: currentWord.text,
                 userInput: inputValue.trim(),

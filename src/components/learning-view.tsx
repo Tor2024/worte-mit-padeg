@@ -90,8 +90,6 @@ export function LearningView({ word }: LearningViewProps) {
                     <DetailItem label="Управление" value={verbDetails.verbGovernment} />
                     <DetailItem label="Perfekt" value={verbDetails.perfect} />
                     <ConjugationTable label="Präsens" data={verbDetails.presentTense} />
-                    <ConjugationTable label="Präteritum" data={verbDetails.prateritum} />
-                    <ConjugationTable label="Futur I" data={verbDetails.futurI} />
                   </>
                 )}
                 {partOfSpeech === 'adjective' && adjectiveDetails && (

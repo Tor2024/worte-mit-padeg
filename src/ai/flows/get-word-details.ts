@@ -45,9 +45,7 @@ For the given German word or phrase "{{wordOrPhrase}}", provide a comprehensive 
 5.  **verbDetails**: If it's a verb:
     - **presentTense**: Provide its full present tense conjugation for all persons (ich, du, er/sie/es, wir, ihr, sie/Sie).
     - **perfect**: Provide its perfect tense form (e.g., "ist gegangen").
-    - **prateritum**: Provide its **full** Präteritum tense conjugation for all persons.
-    - **futurI**: Provide its **full** Futur I tense conjugation for all persons.
-    - **verbGovernment**: Specify the case(s) it governs or the specific preposition it's commonly used with. **This explanation must be in Russian.** For example, for "warten", you should write something like "warten auf + Akkusativ (ждать кого-то/что-то)". For "gehen", you could write "часто с предлогами: zu + Dativ (к кому-то/месту), in + Akkusativ (в какое-то место), nach + Dativ (в страну/город)".
+    - **verbGovernment**: Specify the case(s) it governs or the specific preposition it's commonly used with. **This explanation must be in Russian and include context or examples.** For example, for "warten", you should write "warten auf + Akkusativ (ждать кого-то/что-то, например: ждать автобус)". For "ausmachen", you might write "Akkusativ (выключать свет, радио), Dativ (иметь значение, составлять трудности), Akkusativ (договариваться о встрече)".
     - **isReflexive**: Set to true if it is a reflexive verb (used with "sich").
 
 6.  **adjectiveDetails**: If it's an adjective:
