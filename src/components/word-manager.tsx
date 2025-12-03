@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { fetchWordDetails } from '@/lib/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
-import { getNextReviewDate } from '@/lib/srs';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const getPartOfSpeechRussian = (pos: WordType) => {
     switch (pos) {
@@ -43,6 +43,7 @@ export function WordManager() {
   const [filter, setFilter] = useState<WordType | 'all'>('all');
   const { toast } = useToast();
   const [isPending, startTransition] = useState(false);
+  const [earlySessionDialogOpen, setEarlySessionDialogOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -122,16 +123,23 @@ export function WordManager() {
     );
     saveDictionary(newDictionary);
   };
+
+  const startSessionWithWords = (words: Word[]) => {
+    const shuffledWords = [...words].sort(() => Math.random() - 0.5);
+    setSession({ words: shuffledWords });
+  };
   
   const handleStartSession = (words: Word[]) => {
     const wordsForReview = words.filter(word => new Date(word.nextReview) <= new Date());
     
     if (wordsForReview.length > 0) {
-      // Shuffle words to make session less predictable
-      const shuffledWords = wordsForReview.sort(() => Math.random() - 0.5);
-      setSession({ words: shuffledWords });
+      startSessionWithWords(wordsForReview);
     } else {
-        toast({ title: "Все выучено!", description: "На сегодня нет слов для повторения. Добавьте новые слова или заходите позже.", variant: "default" });
+        if (words.length > 0) {
+            setEarlySessionDialogOpen(true);
+        } else {
+            toast({ title: "Словарь пуст", description: "Добавьте слова в словарь, чтобы начать обучение.", variant: "default" });
+        }
     }
   };
 
@@ -148,6 +156,7 @@ export function WordManager() {
   }
 
   return (
+    <>
     <div className="w-full max-w-3xl animate-in fade-in-50 space-y-8">
       <Card className="shadow-lg">
           <CardHeader>
@@ -209,7 +218,7 @@ export function WordManager() {
                   <SelectItem value="other">Другое</SelectItem>
                 </SelectContent>
               </Select>
-               <Button onClick={() => handleStartSession(filteredDictionary)}>
+               <Button onClick={() => handleStartSession(filteredDictionary)} disabled={dictionary.length === 0}>
                  <BrainCircuit className="mr-2 h-4 w-4" />
                  Начать обучение
                </Button>
@@ -257,5 +266,25 @@ export function WordManager() {
         </CardContent>
       </Card>
     </div>
+    <AlertDialog open={earlySessionDialogOpen} onOpenChange={setEarlySessionDialogOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Все выучено на сегодня!</AlertDialogTitle>
+                <AlertDialogDescription>
+                    По расписанию у вас нет слов для повторения. Хотите начать сессию со всеми словами из текущего фильтра?
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Нет, спасибо</AlertDialogCancel>
+                <AlertDialogAction onClick={() => {
+                    startSessionWithWords(filteredDictionary);
+                    setEarlySessionDialogOpen(false);
+                }}>
+                    Да, начать
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
