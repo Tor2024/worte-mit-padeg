@@ -70,13 +70,10 @@ export type WordDetailsOutput = z.infer<typeof WordDetailsOutputSchema>;
 
 // Schema for provide-intelligent-error-correction flow
 export const IntelligentErrorCorrectionInputSchema = z.object({
-  word: z.string().describe('The word or phrase entered by the user.'),
+  word: z.string().describe('The word or phrase the user is practicing.'),
   userInput: z.string().describe('The user input that needs to be checked.'),
-  wordType: z.enum(['noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'other']).describe('The type of the word.'),
-  expectedArticle: z.string().optional().describe('The expected article for nouns (der, die, das). Only applicable if wordType is noun.'),
-  practiceType: z.enum(['perfect', 'fill-in-the-blank', 'case-quiz']).optional().describe('The specific verb form being practiced.'),
+  practiceType: z.enum(['article', 'perfect', 'fill-in-the-blank', 'case-quiz']).describe('The specific type of practice being performed.'),
   expectedAnswer: z.string().optional().describe('The expected correct answer for the practice type.'),
-  knownSynonyms: z.array(z.string()).optional().describe('Known synonyms for the word, if any.'),
   sentenceContext: z.string().optional().describe('The sentence in which the word was used, with a blank for the word. For fill-in-the-blank checks.'),
   userCaseSelection: z.string().optional().describe("The case the user selected in a case quiz."),
   correctCase: z.string().optional().describe("The correct case for a case quiz."),

@@ -24,7 +24,7 @@ interface UnifiedSessionProps {
 }
 
 type SessionView = 'loading' | 'flashcard' | 'multiple-choice' | 'article-quiz' | 'verb-practice' | 'recall-quiz' | 'fill-in-the-blank';
-type AnswerStatus = 'unanswered' | 'correct' | 'incorrect' | 'synonym';
+type AnswerStatus = 'unanswered' | 'checking' | 'correct' | 'incorrect' | 'synonym';
 type VerbPracticeType = 'perfect';
 
 type FeedbackType = IntelligentErrorCorrectionOutput | CheckRecallOutput | null;
@@ -62,31 +62,39 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
   const [inputValue, setInputValue] = useState('');
   const [answerStatus, setAnswerStatus] = useState<AnswerStatus>('unanswered');
   const [verbPracticeType, setVerbPracticeType] = useState<VerbPracticeType>('perfect');
-  const [lastQuality, setLastQuality] = useState<number | undefined>(undefined);
+  const [isChecking, setIsChecking] = useState(false);
   
   const currentWord = useMemo(() => words[currentIndex], [words, currentIndex]);
 
   const determineNextView = useCallback((word: Word): SessionView => {
     // First time seeing the word? Always flashcard.
-    if (word.repetitions < 1 && word.interval < 1) {
+    if (word.repetitions === 0 && word.interval < 1) {
       return 'flashcard';
     }
 
-    const availableViews: SessionView[] = ['multiple-choice'];
-    const weights: { [key in SessionView]?: number } = {
-        'multiple-choice': 0.3,
-        'recall-quiz': 0.3,
-        'fill-in-the-blank': 0.4,
-    };
+    const availableViews: SessionView[] = [];
+    const weights: { [key in SessionView]?: number } = {};
     
-    if (word.details.partOfSpeech === 'noun' && word.easeFactor < 2.8) {
+    // Recall is a good default for learned words
+    availableViews.push('recall-quiz');
+    weights['recall-quiz'] = 0.4;
+
+    // Fill in the blank is also a great option
+    availableViews.push('fill-in-the-blank');
+    weights['fill-in-the-blank'] = 0.4;
+    
+    // Multiple choice is less effective but good for variety
+    availableViews.push('multiple-choice');
+    weights['multiple-choice'] = 0.2;
+
+    if (word.details.partOfSpeech === 'noun') {
         availableViews.push('article-quiz');
-        weights['article-quiz'] = 0.3;
+        weights['article-quiz'] = 0.3; // Give article quiz a decent chance
     }
     
-    if (word.details.partOfSpeech === 'verb' && word.easeFactor < 3.0) {
+    if (word.details.partOfSpeech === 'verb' && word.details.verbDetails?.perfect) {
         availableViews.push('verb-practice');
-        weights['verb-practice'] = 0.35;
+        weights['verb-practice'] = 0.35; // And perfect tense practice
     }
 
     // Weighted random selection
@@ -100,8 +108,8 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
         }
     }
 
-    // Fallback to flashcard if something goes wrong
-    return 'flashcard';
+    // Fallback if something goes wrong
+    return 'recall-quiz';
   }, []);
 
   const loadView = useCallback(async (word: Word) => {
@@ -111,7 +119,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     setInputValue('');
     setQuizData(null);
     setFeedback(null);
-    setLastQuality(undefined);
+    setIsChecking(false);
     
     const nextView = determineNextView(word);
 
@@ -134,6 +142,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     } else if (nextView === 'recall-quiz') {
       setView('recall-quiz');
     } else if (nextView === 'fill-in-the-blank') {
+        // Pick a random example sentence
         const example = word.details.examples[Math.floor(Math.random() * word.details.examples.length)];
         const result = await fetchFillInTheBlank({ word: word.text, partOfSpeech: word.details.partOfSpeech, example });
         if (result.success) {
@@ -152,14 +161,9 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     }
   }, [currentWord, loadView]);
   
-  const handleNext = (quality?: number) => {
-    // Use the quality from the last check, or the one passed in (for flashcards)
-    const srsQuality = quality !== undefined ? quality : lastQuality;
-
-    if (srsQuality !== undefined) {
-      const newSrsData = getNextReviewDate(currentWord, srsQuality);
-      onWordUpdate({ ...currentWord, ...newSrsData });
-    }
+  const handleNext = (quality: number) => {
+    const newSrsData = getNextReviewDate(currentWord, quality);
+    onWordUpdate({ ...currentWord, ...newSrsData });
 
     if (currentIndex < words.length - 1) {
       setCurrentIndex(prev => prev + 1);
@@ -181,111 +185,111 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
   
   const handleCheck = async () => {
     const isInputBased = ['verb-practice', 'recall-quiz', 'fill-in-the-blank'].includes(view);
-    if (!currentWord || (isInputBased && !inputValue) || (!isInputBased && !selectedOption)) return;
+    if (isChecking || !currentWord || (isInputBased && !inputValue) || (!isInputBased && !selectedOption)) return;
+
+    setIsChecking(true);
 
     let quality: number;
     let feedbackData: FeedbackType = null;
     let newStatus: AnswerStatus = 'incorrect';
 
-    switch(view) {
-      case 'multiple-choice': {
-        const question = quizData as GenerateQuizQuestionOutput;
-        const isCorrect = selectedOption === question.correctAnswer;
-        quality = isCorrect ? 5 : 2;
-        newStatus = isCorrect ? 'correct' : 'incorrect';
-        break;
-      }
-
-      case 'article-quiz': {
-        const result = await checkAnswer({
-            word: currentWord.text,
-            userInput: selectedOption!,
-            wordType: 'noun',
-            expectedArticle: currentWord.details.nounDetails?.article
-        });
-        if (result.success) {
-            feedbackData = result.data;
-            quality = result.data.isCorrect ? 5 : 2;
-            newStatus = result.data.isCorrect ? 'correct' : 'incorrect';
-        } else {
-            console.error(result.error);
-            quality = 1;
+    try {
+        switch(view) {
+        case 'multiple-choice': {
+            const question = quizData as GenerateQuizQuestionOutput;
+            const isCorrect = selectedOption === question.correctAnswer;
+            quality = isCorrect ? 5 : 2;
+            newStatus = isCorrect ? 'correct' : 'incorrect';
+            setAnswerStatus(newStatus);
+            handleNext(quality);
+            break;
         }
-        break;
-      }
-      
-      case 'verb-practice': {
-          const expectedAnswer = currentWord.details.verbDetails?.perfect;
-          const result = await checkAnswer({
-              word: currentWord.text,
-              userInput: inputValue.trim(),
-              wordType: 'verb',
-              practiceType: verbPracticeType,
-              expectedAnswer: expectedAnswer,
-          });
-          if (result.success) {
-              feedbackData = result.data;
-              quality = result.data.isCorrect ? 5 : 2;
-              newStatus = result.data.isCorrect ? 'correct' : 'incorrect';
-          } else {
-              console.error(result.error);
-              quality = 1;
-          }
-          break;
-      }
 
-      case 'recall-quiz': {
-          const result = await checkRecallAnswer({
-              russianWord: currentWord.details.translation,
-              germanWord: currentWord.text,
-              partOfSpeech: currentWord.details.partOfSpeech,
-              article: currentWord.details.nounDetails?.article,
-              userInput: inputValue.trim(),
-          });
-          if (result.success) {
-              feedbackData = result.data;
-              quality = result.data.isSynonym ? 4 : (result.data.isCorrect ? 5 : 2);
-              newStatus = result.data.isSynonym ? 'synonym' : (result.data.isCorrect ? 'correct' : 'incorrect');
-          } else {
-              console.error(result.error);
-              quality = 1;
-          }
-          break;
-      }
-      
-      case 'fill-in-the-blank': {
-          const blankQuiz = quizData as GenerateFillInTheBlankOutput;
-          const result = await checkAnswer({
-              word: currentWord.text,
-              userInput: inputValue.trim(),
-              wordType: currentWord.details.partOfSpeech,
-              practiceType: 'fill-in-the-blank',
-              expectedAnswer: blankQuiz.correctAnswer,
-              sentenceContext: blankQuiz.sentenceWithBlank,
-          });
-          if (result.success) {
-              feedbackData = result.data;
-              quality = result.data.isCorrect ? 5 : 2;
-              newStatus = result.data.isCorrect ? 'correct' : 'incorrect';
-          } else {
-              console.error(result.error);
-              quality = 1;
-          }
-          break;
-      }
+        case 'article-quiz': {
+            const result = await checkAnswer({
+                word: currentWord.text,
+                userInput: selectedOption!,
+                practiceType: 'article',
+                expectedAnswer: currentWord.details.nounDetails?.article
+            });
+            if (result.success) {
+                feedbackData = result.data;
+                quality = result.data.isCorrect ? 5 : 1;
+                newStatus = result.data.isCorrect ? 'correct' : 'incorrect';
+            } else { throw new Error(result.error); }
+            break;
+        }
+        
+        case 'verb-practice': {
+            const expectedAnswer = currentWord.details.verbDetails?.perfect;
+            const result = await checkAnswer({
+                word: currentWord.text,
+                userInput: inputValue.trim(),
+                practiceType: verbPracticeType,
+                expectedAnswer: expectedAnswer,
+            });
+            if (result.success) {
+                feedbackData = result.data;
+                quality = result.data.isCorrect ? 5 : 1;
+                newStatus = result.data.isCorrect ? 'correct' : 'incorrect';
+            } else { throw new Error(result.error); }
+            break;
+        }
 
-      default:
-        quality = 3; // Should not happen for quizzes
-        break;
+        case 'recall-quiz': {
+            const result = await checkRecallAnswer({
+                russianWord: currentWord.details.translation,
+                germanWord: currentWord.text,
+                partOfSpeech: currentWord.details.partOfSpeech,
+                article: currentWord.details.nounDetails?.article,
+                userInput: inputValue.trim(),
+            });
+            if (result.success) {
+                feedbackData = result.data;
+                quality = result.data.isSynonym ? 4 : (result.data.isCorrect ? 5 : 1);
+                newStatus = result.data.isSynonym ? 'synonym' : (result.data.isCorrect ? 'correct' : 'incorrect');
+            } else { throw new Error(result.error); }
+            break;
+        }
+        
+        case 'fill-in-the-blank': {
+            const blankQuiz = quizData as GenerateFillInTheBlankOutput;
+            const result = await checkAnswer({
+                word: currentWord.text,
+                userInput: inputValue.trim(),
+                practiceType: 'fill-in-the-blank',
+                expectedAnswer: blankQuiz.correctAnswer,
+                sentenceContext: blankQuiz.sentenceWithBlank,
+            });
+            if (result.success) {
+                feedbackData = result.data;
+                quality = result.data.isCorrect ? 5 : 1;
+                newStatus = result.data.isCorrect ? 'correct' : 'incorrect';
+            } else { throw new Error(result.error); }
+            break;
+        }
+
+        default:
+            // This case should not be hit for quizzes
+            return;
+        }
+
+        if (view !== 'multiple-choice') {
+            setFeedback(feedbackData);
+            setAnswerStatus(newStatus);
+            // We need a way to move to the next card after showing feedback
+            // For now, let's keep the quality and move on when user clicks 'Next'
+        }
+
+    } catch (error) {
+        console.error("Error during check:", error);
+        // Handle error display to user if needed
+    } finally {
+        setIsChecking(false);
     }
-    
-    setLastQuality(quality);
-    setFeedback(feedbackData);
-    setAnswerStatus(newStatus);
 }
 
-
-  const progress = ((currentIndex + 1) / words.length) * 100;
+  const progress = ((currentIndex) / words.length) * 100;
   
   const renderContent = () => {
     if (view === 'loading' || !currentWord) {
@@ -298,25 +302,15 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     }
     
     if (view === 'flashcard') {
-        const isFirstEverReview = currentWord.repetitions === 0 && currentWord.interval < 1;
         return (
             <div className="flex flex-col h-full">
                 <div className="flex-1 min-h-0">
                     <LearningView word={currentWord} />
                 </div>
-                <div className="mt-4 pt-4 border-t flex justify-around">
-                    {isFirstEverReview ? (
-                        <>
-                            <Button size="lg" variant="destructive" onClick={() => handleNext(1)}>Не помню</Button>
-                            <Button size="lg" variant="secondary" onClick={() => handleNext(3)}>Помню</Button>
-                            <Button size="lg" onClick={() => handleNext(5)}>Легко!</Button>
-                        </>
-                    ) : (
-                       <Button size="lg" onClick={() => handleNext()} className="w-full">
-                            Понятно
-                            <ArrowRight className="h-4 w-4 ml-2"/>
-                        </Button>
-                    )}
+                <div className="mt-4 pt-4 border-t grid grid-cols-3 gap-3">
+                    <Button size="lg" variant="destructive" onClick={() => handleNext(1)}>Не помню</Button>
+                    <Button size="lg" variant="secondary" onClick={() => handleNext(3)}>Помню</Button>
+                    <Button size="lg" onClick={() => handleNext(5)}>Легко!</Button>
                 </div>
             </div>
         )
@@ -327,10 +321,11 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
         return (
             <Card className="border-none shadow-none">
                 <CardContent className="p-0 flex flex-col items-center gap-6">
+                   <h3 className="text-lg text-muted-foreground">Какой артикль у слова:</h3>
                    <h2 className="font-headline text-5xl text-center">{currentWord.text}</h2>
                    <RadioGroup 
                         value={selectedOption || undefined}
-                        onValueChange={(value) => setSelectedOption(value as any)}
+                        onValueChange={setSelectedOption}
                         className="flex gap-4"
                         disabled={answerStatus !== 'unanswered'}
                     >
@@ -349,7 +344,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                    </RadioGroup>
 
                    {answerStatus !== 'unanswered' && currentFeedback && (
-                        <Alert variant={answerStatus === 'correct' ? 'default' : 'destructive'} className="animate-in fade-in-50">
+                        <Alert variant={answerStatus === 'correct' ? 'default' : 'destructive'} className="animate-in fade-in-50 w-full">
                             {answerStatus === 'correct' ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
                             <AlertTitle>{answerStatus === 'correct' ? 'Правильно!' : 'Не совсем'}</AlertTitle>
                             <AlertDescription>
@@ -372,7 +367,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                     <h2 className="font-headline text-2xl text-center">
                         Напишите форму <strong>{practiceTypeText}</strong> для глагола <strong className="text-primary">{currentWord.text}</strong>
                     </h2>
-                    <form onSubmit={(e) => { e.preventDefault(); answerStatus === 'unanswered' ? handleCheck() : handleNext() }} className="w-full">
+                    <form onSubmit={(e) => { e.preventDefault(); if (answerStatus === 'unanswered') handleCheck(); }} className="w-full">
                         <Input 
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
@@ -409,7 +404,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                         {currentWord.details.translation}
                     </h3>
                      <p className="text-sm text-muted-foreground">({getPartOfSpeechRussian(currentWord.details.partOfSpeech)})</p>
-                    <form onSubmit={(e) => { e.preventDefault(); answerStatus === 'unanswered' ? handleCheck() : handleNext() }} className="w-full">
+                    <form onSubmit={(e) => { e.preventDefault(); if (answerStatus === 'unanswered') handleCheck(); }} className="w-full">
                         <Input 
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
@@ -465,7 +460,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                     </p>
                     <p className="text-sm text-muted-foreground text-center">"{blankQuiz.russianTranslation}"</p>
                     
-                    <form onSubmit={(e) => { e.preventDefault(); answerStatus === 'unanswered' ? handleCheck() : handleNext() }} className="w-full">
+                    <form onSubmit={(e) => { e.preventDefault(); if (answerStatus === 'unanswered') handleCheck(); }} className="w-full">
                         <Input 
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
@@ -528,25 +523,6 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                     </Label>
                   ))}
                 </RadioGroup>
-
-                {answerStatus === 'incorrect' && (
-                  <Alert variant="destructive" className="animate-in fade-in-50 w-full">
-                    <X className="h-4 w-4" />
-                    <AlertTitle>Неправильно</AlertTitle>
-                    <AlertDescription>
-                      Правильный ответ: <strong>{isCaseQuestion ? formatCaseName(question.correctAnswer) : question.correctAnswer}</strong>
-                    </AlertDescription>
-                  </Alert>
-                )}
-                 {answerStatus === 'correct' && (
-                  <Alert className="animate-in fade-in-50 w-full border-green-500 text-green-700 dark:text-green-400 [&>svg]:text-green-700 dark:[&>svg]:text-green-400">
-                    <Check className="h-4 w-4" />
-                    <AlertTitle>Отлично!</AlertTitle>
-                    <AlertDescription>
-                      Вы выбрали правильный ответ.
-                    </AlertDescription>
-                  </Alert>
-                )}
               </CardContent>
             </Card>
         )
@@ -555,8 +531,22 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     return null;
   }
 
+  const handleFooterButton = () => {
+      if (answerStatus === 'unanswered') {
+          handleCheck();
+      } else {
+          let quality: number;
+          if (answerStatus === 'correct') quality = 5;
+          else if (answerStatus === 'synonym') quality = 4;
+          else quality = 1;
+          handleNext(quality);
+      }
+  }
+
   const isQuiz = ['multiple-choice', 'article-quiz', 'verb-practice', 'recall-quiz', 'fill-in-the-blank'].includes(view);
-  const showNextButton = !isQuiz || (isQuiz && answerStatus !== 'unanswered');
+  const isFlashcard = view === 'flashcard';
+  const showCheckButton = isQuiz && answerStatus === 'unanswered';
+  const showNextButton = isQuiz && answerStatus !== 'unanswered';
   const canCheck = (view === 'multiple-choice' || view === 'article-quiz') ? !!selectedOption : !!inputValue.trim();
 
   return (
@@ -577,7 +567,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
         <DialogFooter className="p-6 bg-muted/50 border-t flex-col sm:flex-col sm:space-x-0 items-center gap-4">
         <Progress value={progress} className="w-full h-2" />
         <div className="flex justify-between items-center w-full">
-            <Button variant="outline" onClick={handlePrev} disabled={currentIndex === 0}>
+            <Button variant="outline" onClick={handlePrev} disabled={currentIndex === 0 || isFlashcard}>
                 <ArrowLeft className="h-4 w-4 mr-2"/>
                 Назад
             </Button>
@@ -585,17 +575,23 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                 {currentIndex + 1} / {words.length}
             </div>
 
-            {!showNextButton && (
-                <Button onClick={handleCheck} disabled={!canCheck}>
+            {showCheckButton && (
+                <Button onClick={handleCheck} disabled={!canCheck || isChecking}>
+                    {isChecking ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : null}
                     Проверить
                 </Button>
             )}
 
             {showNextButton && (
-                <Button onClick={() => handleNext()}>
+                <Button onClick={handleFooterButton}>
                     {currentIndex === words.length - 1 ? 'Завершить' : 'Далее'}
                     <ArrowRight className="h-4 w-4 ml-2"/>
                 </Button>
+            )}
+
+            {isFlashcard && (
+                 <Button variant="ghost" disabled={true} className="w-[98px]">
+                 </Button>
             )}
         </div>
         </DialogFooter>
@@ -604,5 +600,3 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     </Dialog>
   );
 }
-
-    

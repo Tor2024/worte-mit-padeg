@@ -63,7 +63,7 @@ export async function fetchFillInTheBlank(input: GenerateFillInTheBlankInput): P
     }
 }
 
-export async function fetchCaseQuiz(input: GenerateCaseQuizInput): Promise<{ success: true, data: GenerateCaseQuizOutput } | { success: false, error: string }> {
+export async function fetchCaseQuiz(input: GenerateCaseQuizInput): Promise<{ success: true, data: GenerateCaseQuizOutput } | { success: false, error: 'Не удалось создать викторину по падежам.' }> {
     try {
         const result = await generateCaseQuiz(input);
         // Sometimes the AI might return an empty string for the answer if it gets confused.
