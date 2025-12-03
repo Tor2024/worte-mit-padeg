@@ -31,7 +31,7 @@ export function ArticleQuiz({ word }: ArticleQuizProps) {
                 setResult(res.data);
             } else {
                 toast({
-                    title: "Fehler",
+                    title: "Ошибка",
                     description: res.error,
                     variant: "destructive"
                 })
@@ -54,20 +54,20 @@ export function ArticleQuiz({ word }: ArticleQuizProps) {
         return (
             <Card className="bg-transparent shadow-none border-none">
                 <CardHeader className="p-0 mb-4">
-                    <CardTitle className="font-headline text-xl">Quiz Ergebnis</CardTitle>
+                    <CardTitle className="font-headline text-xl">Результат викторины</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0 space-y-4">
                     <Alert variant={result.isCorrect ? 'default' : 'destructive'} className={result.isCorrect ? 'border-accent bg-accent/10' : ''}>
                         {result.isCorrect ? <CheckCircle2 className="h-4 w-4 text-accent" /> : <AlertCircle className="h-4 w-4" />}
-                        <AlertTitle className={result.isCorrect ? 'text-accent' : ''}>{result.isCorrect ? 'Richtig!' : 'Nicht ganz...'}</AlertTitle>
+                        <AlertTitle className={result.isCorrect ? 'text-accent' : ''}>{result.isCorrect ? 'Правильно!' : 'Не совсем...'}</AlertTitle>
                         <AlertDescription className={result.isCorrect ? 'text-accent/90' : ''}>
                             {result.explanation}
-                            {result.hint && <p className="mt-2 text-sm"><strong>Hinweis:</strong> {result.hint}</p>}
+                            {result.hint && <p className="mt-2 text-sm"><strong>Подсказка:</strong> {result.hint}</p>}
                         </AlertDescription>
                     </Alert>
                     <Button onClick={handleReset} variant="outline">
                         <RefreshCw className="mr-2 h-4 w-4" />
-                        Nochmal versuchen
+                        Попробовать еще раз
                     </Button>
                 </CardContent>
             </Card>
@@ -77,9 +77,9 @@ export function ArticleQuiz({ word }: ArticleQuizProps) {
     return (
         <Card className="bg-transparent shadow-none border-none">
             <CardHeader className="p-0 mb-4">
-                <CardTitle className="font-headline text-xl">Welcher Artikel ist richtig?</CardTitle>
+                <CardTitle className="font-headline text-xl">Какой артикль правильный?</CardTitle>
                 <CardDescription>
-                    Wählen Sie den korrekten Artikel für <strong className="text-primary">{word.text}</strong>.
+                    Выберите правильный артикль для <strong className="text-primary">{word.text}</strong>.
                 </CardDescription>
             </CardHeader>
             <CardContent className="p-0 space-y-4">

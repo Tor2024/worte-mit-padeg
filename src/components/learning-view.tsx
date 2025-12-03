@@ -28,7 +28,7 @@ export function LearningView({ word, onReset }: LearningViewProps) {
     <div className="w-full max-w-3xl animate-in fade-in-50">
       <Button variant="ghost" onClick={onReset} className="mb-4 -ml-4">
         <ArrowLeft className="mr-2 h-4 w-4" />
-        Anderes Wort lernen
+        Выучить другое слово
       </Button>
       <Card className="shadow-lg">
         <CardHeader>
@@ -36,21 +36,21 @@ export function LearningView({ word, onReset }: LearningViewProps) {
             {renderArticle(word.article)}{' '}{word.text}
           </CardTitle>
           <CardDescription>
-            Wortart: <span className="font-semibold capitalize">{word.type}</span>
+            Часть речи: <span className="font-semibold capitalize">{word.type}</span>
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="examples" className="w-full">
             <TabsList className={`grid w-full ${word.type === 'noun' ? 'grid-cols-3' : 'grid-cols-2'}`}>
               <TabsTrigger value="examples">
-                <BookOpen className="mr-2 h-4 w-4" /> Beispiele
+                <BookOpen className="mr-2 h-4 w-4" /> Примеры
               </TabsTrigger>
               <TabsTrigger value="practice">
-                <Lightbulb className="mr-2 h-4 w-4" /> Übung
+                <Lightbulb className="mr-2 h-4 w-4" /> Практика
               </TabsTrigger>
               {word.type === 'noun' && (
                 <TabsTrigger value="quiz">
-                  <Puzzle className="mr-2 h-4 w-4" /> Artikel-Quiz
+                  <Puzzle className="mr-2 h-4 w-4" /> Викторина по артиклям
                 </TabsTrigger>
               )}
             </TabsList>

@@ -33,21 +33,21 @@ const prompt = ai.definePrompt({
   name: 'generateNewSentencesPrompt',
   input: {schema: GenerateNewSentencesInputSchema},
   output: {schema: GenerateNewSentencesOutputSchema},
-  prompt: `You are an AI language learning assistant. Your goal is to help users learn German by generating example sentences with words they're learning and suggest related words and phrases.
+  prompt: `Вы — ИИ-помощник для изучения языков. Ваша цель — помочь пользователям выучить немецкий язык, создавая примеры предложений со словами, которые они изучают, и предлагая связанные слова и фразы.
 
-  Word: {{{word}}}
-  Context: {{{context}}}
-  Learning Progress: {{{learningProgress}}}
+  Слово: {{{word}}}
+  Контекст: {{{context}}}
+  Прогресс обучения: {{{learningProgress}}}
 
-  Generate 3 example sentences using the word. Also, suggest 5 related German words or phrases.
+  Создайте 3 примера предложений с использованием данного слова. Также предложите 5 связанных немецких слов или фраз.
 
-  Sentences:
+  Предложения:
   - ...
-  Related Words:
+  Связанные слова:
   - ...
 
-  Ensure the generated sentences are contextually relevant and helpful for language learners. Keep in mind that a user is learning German and give simple but helpful examples.
-  Make sure the "sentences" field is just a list of sentences, and "relatedWords" is just a list of related words.`,
+  Убедитесь, что сгенерированные предложения контекстуально релевантны и полезны для изучающих язык. Помните, что пользователь изучает немецкий язык, и давайте простые, но полезные примеры.
+  Убедитесь, что поле "sentences" — это просто список предложений, а "relatedWords" — это просто список связанных слов.`,
 });
 
 const generateNewSentencesFlow = ai.defineFlow(
@@ -58,7 +58,7 @@ const generateNewSentencesFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    output!.progress = 'Generated sentences using the learned word and suggested related words and phrases.';
+    output!.progress = 'Сгенерированы предложения с использованием выученного слова и предложены связанные слова и фразы.';
     return output!;
   }
 );

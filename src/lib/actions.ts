@@ -15,13 +15,13 @@ export async function getUsageExamples(word: string): Promise<{ success: true, d
     return { success: true, data: result.exampleSentences };
   } catch (error) {
     console.error(error);
-    return { success: false, error: 'Failed to generate examples.' };
+    return { success: false, error: 'Не удалось сгенерировать примеры.' };
   }
 }
 
 export async function checkArticle(word: Word, selectedArticle: 'der' | 'die' | 'das'): Promise<{ success: true, data: IntelligentErrorCorrectionOutput } | { success: false, error: string }> {
   if (word.type !== 'noun' || !word.article) {
-    return { success: false, error: 'This is not a valid noun for the quiz.' };
+    return { success: false, error: 'Это не является допустимым существительным для викторины.' };
   }
   try {
     const result = await provideIntelligentErrorCorrection({
@@ -33,7 +33,7 @@ export async function checkArticle(word: Word, selectedArticle: 'der' | 'die' | 
     return { success: true, data: result };
   } catch (error) {
     console.error(error);
-    return { success: false, error: 'Failed to check the article.' };
+    return { success: false, error: 'Не удалось проверить артикль.' };
   }
 }
 
@@ -43,6 +43,6 @@ export async function getAiPractice(word: string): Promise<{ success: true, data
     return { success: true, data: result };
   } catch (error) {
     console.error(error);
-    return { success: false, error: 'Failed to generate practice content.' };
+    return { success: false, error: 'Не удалось сгенерировать практическое задание.' };
   }
 }

@@ -47,8 +47,8 @@ export function WordManager() {
     if (!inputValue.trim()) return;
     if (wordType === 'noun' && !article) {
         toast({
-            title: "Artikel fehlt",
-            description: "Bitte wählen Sie einen Artikel für das Nomen.",
+            title: "Артикль отсутствует",
+            description: "Пожалуйста, выберите артикль для существительного.",
             variant: "destructive",
         })
         return;
@@ -79,43 +79,43 @@ export function WordManager() {
             <CardHeader>
                 <CardTitle className="font-headline text-2xl flex items-center gap-2">
                     <BookMarked className="h-6 w-6 text-primary" />
-                    Lass uns ein neues Wort lernen!
+                    Давайте выучим новое слово!
                 </CardTitle>
                 <CardDescription>
-                    Gib ein deutsches Wort oder eine Phrase ein, um zu beginnen.
+                    Введите немецкое слово или фразу, чтобы начать.
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <form onSubmit={(e) => { e.preventDefault(); handleStartLearning(); }} className="space-y-6">
                     <div className="space-y-2">
-                        <Label htmlFor="word-input">Wort / Phrase</Label>
+                        <Label htmlFor="word-input">Слово / Фраза</Label>
                         <Input 
                             id="word-input" 
-                            placeholder="z.B. Haus, gehen, schön" 
+                            placeholder="например, Haus, gehen, schön" 
                             value={inputValue}
                             onChange={handleInputChange}
                         />
                     </div>
                     
                     <div className="space-y-2">
-                        <Label>Wortart</Label>
+                        <Label>Часть речи</Label>
                         <Select onValueChange={handleWordTypeChange} value={wordType}>
                             <SelectTrigger>
-                                <SelectValue placeholder="Wortart auswählen" />
+                                <SelectValue placeholder="Выберите часть речи" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="noun">Nomen</SelectItem>
-                                <SelectItem value="verb">Verb</SelectItem>
-                                <SelectItem value="adjective">Adjektiv</SelectItem>
-                                <SelectItem value="adverb">Adverb</SelectItem>
-                                <SelectItem value="other">Andere</SelectItem>
+                                <SelectItem value="noun">Существительное</SelectItem>
+                                <SelectItem value="verb">Глагол</SelectItem>
+                                <SelectItem value="adjective">Прилагательное</SelectItem>
+                                <SelectItem value="adverb">Наречие</SelectItem>
+                                <SelectItem value="other">Другое</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
 
                     {showArticle && (
                         <div className="space-y-3 rounded-md border p-4 animate-in fade-in-50">
-                            <Label className="font-semibold">Artikel</Label>
+                            <Label className="font-semibold">Артикль</Label>
                             <RadioGroup onValueChange={(v) => setArticle(v as 'der' | 'die' | 'das')} value={article || ''}>
                                 <div className="flex items-center space-x-6">
                                     <div className="flex items-center space-x-2">
@@ -140,7 +140,7 @@ export function WordManager() {
                         className="w-full"
                         disabled={!inputValue.trim()}
                     >
-                        Lernen beginnen
+                        Начать обучение
                         <Sparkles className="ml-2 h-4 w-4" />
                     </Button>
                 </form>

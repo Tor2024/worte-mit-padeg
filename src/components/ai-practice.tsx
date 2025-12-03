@@ -26,7 +26,7 @@ export function AiPractice({ word }: AiPracticeProps) {
         setContent(result.data);
       } else {
         toast({
-          title: "Fehler",
+          title: "Ошибка",
           description: result.error,
           variant: "destructive",
         });
@@ -48,9 +48,9 @@ export function AiPractice({ word }: AiPracticeProps) {
   return (
     <Card className="bg-transparent shadow-none border-none">
       <CardHeader className="p-0 mb-4">
-        <CardTitle className="font-headline text-xl">KI-gestützte Übung</CardTitle>
+        <CardTitle className="font-headline text-xl">Практика с ИИ</CardTitle>
         <CardDescription>
-          Erstellen Sie neue Sätze und entdecken Sie verwandte Wörter, um Ihr Lernen zu vertiefen.
+          Создавайте новые предложения и открывайте для себя связанные слова, чтобы углубить свое обучение.
         </CardDescription>
       </CardHeader>
       <CardContent className="p-0">
@@ -62,13 +62,13 @@ export function AiPractice({ word }: AiPracticeProps) {
         {!isPending && content && (
           <div className="space-y-6">
             <div className="space-y-3 rounded-md border bg-card p-4">
-              <h3 className="font-semibold text-card-foreground">Neue Sätze</h3>
+              <h3 className="font-semibold text-card-foreground">Новые предложения</h3>
               <ul className="list-disc space-y-3 pl-5 text-card-foreground">
                 {content.sentences.map((ex, i) => <li key={i}>{highlightWord(ex, word.text)}</li>)}
               </ul>
             </div>
             <div className="space-y-3 rounded-md border bg-card p-4">
-              <h3 className="font-semibold text-card-foreground">Ähnliche Wörter</h3>
+              <h3 className="font-semibold text-card-foreground">Похожие слова</h3>
               <div className="flex flex-wrap gap-2">
                 {content.relatedWords.map((rw, i) => (
                   <Badge key={i} variant="secondary">{rw}</Badge>
@@ -77,7 +77,7 @@ export function AiPractice({ word }: AiPracticeProps) {
             </div>
             <Button variant="outline" size="sm" onClick={handleGenerate} disabled={isPending}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Neue Übung generieren
+              Создать новое упражнение
             </Button>
           </div>
         )}
@@ -86,10 +86,10 @@ export function AiPractice({ word }: AiPracticeProps) {
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
               <Sparkles className="h-10 w-10 text-primary" />
             </div>
-            <p className="max-w-xs text-muted-foreground">Bereit für eine personalisierte Übung, die von KI unterstützt wird?</p>
+            <p className="max-w-xs text-muted-foreground">Готовы к персонализированной практике с помощью ИИ?</p>
             <Button onClick={handleGenerate} disabled={isPending}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Übung generieren
+              Создать упражнение
             </Button>
           </div>
         )}

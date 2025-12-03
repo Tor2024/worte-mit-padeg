@@ -41,11 +41,11 @@ const prompt = ai.definePrompt({
   name: 'generateUsageExamplesPrompt',
   input: {schema: GenerateUsageExamplesInputSchema},
   output: {schema: GenerateUsageExamplesOutputSchema},
-  prompt: `You are a German language expert. Generate example sentences for the following German word or phrase:
+  prompt: `Вы эксперт по немецкому языку. Создайте примеры предложений для следующего немецкого слова или фразы:
 
 {{wordOrPhrase}}
 
-Ensure that the example sentences are relevant and effectively demonstrate the word's meaning and usage. Return example sentences as a JSON array of strings.
+Убедитесь, что примеры предложений релевантны и эффективно демонстрируют значение и использование слова. Верните примеры предложений в виде массива строк JSON.
 `,
 });
 

@@ -25,7 +25,7 @@ export function UsageExamples({ word }: UsageExamplesProps) {
         setExamples(result.data);
       } else {
         toast({
-            title: "Fehler",
+            title: "Ошибка",
             description: result.error,
             variant: "destructive",
         });
@@ -52,9 +52,9 @@ export function UsageExamples({ word }: UsageExamplesProps) {
   return (
     <Card className="bg-transparent shadow-none border-none">
       <CardHeader className="p-0 mb-4">
-        <CardTitle className="font-headline text-xl">Anwendungsbeispiele</CardTitle>
+        <CardTitle className="font-headline text-xl">Примеры использования</CardTitle>
         <CardDescription>
-          Sehen Sie, wie "{word.text}" in Sätzen verwendet wird, die von KI generiert wurden.
+          Посмотрите, как "{word.text}" используется в предложениях, сгенерированных ИИ.
         </CardDescription>
       </CardHeader>
       <CardContent className="p-0">
@@ -72,7 +72,7 @@ export function UsageExamples({ word }: UsageExamplesProps) {
             </div>
             <Button variant="outline" size="sm" onClick={handleGenerate} disabled={isPending}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Neue Beispiele generieren
+              Создать новые примеры
             </Button>
           </div>
         )}

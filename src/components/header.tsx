@@ -7,7 +7,7 @@ export function Header() {
         <div className="flex items-center gap-3">
           <Logo className="h-8 w-8 text-primary" />
           <h1 className="font-headline text-xl font-semibold tracking-tight text-foreground">
-            Deutsche Worte mit Oleh
+            Учим немецкие слова с Олегом
           </h1>
         </div>
       </div>

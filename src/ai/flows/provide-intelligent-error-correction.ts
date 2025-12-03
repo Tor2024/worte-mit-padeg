@@ -39,57 +39,57 @@ const prompt = ai.definePrompt({
   name: 'intelligentErrorCorrectionPrompt',
   input: {schema: IntelligentErrorCorrectionInputSchema},
   output: {schema: IntelligentErrorCorrectionOutputSchema},
-  prompt: `You are an AI-powered language learning assistant, providing feedback on German word and phrase usage.
+  prompt: `Вы — языковой ИИ-помощник, предоставляющий обратную связь по использованию немецких слов и фраз.
 
-  The user is learning the word/phrase: {{{word}}} ({{wordType}})
-  User Input: {{{userInput}}}
+  Пользователь изучает слово/фразу: {{{word}}} ({{wordType}})
+  Ввод пользователя: {{{userInput}}}
 
-  Your task is to assess the user's input and provide helpful feedback.
+  Ваша задача — оценить ввод пользователя и предоставить полезную обратную связь.
 
-  Here are the specific instructions based on the word type:
+  Вот конкретные инструкции в зависимости от типа слова:
 
   {{#ifEquals wordType "noun"}}
-  NOUN:
-  - Check if the user input is the correct article (der, die, das) for the noun.
-  - If incorrect, explain the correct article and why it is so. Provide a hint if possible.
-  - isCorrect should reflect if the correct article was provided
+  СУЩЕСТВИТЕЛЬНОЕ:
+  - Проверьте, является ли ввод пользователя правильным артиклем (der, die, das) для существительного.
+  - Если неверно, объясните правильный артикль и почему это так. По возможности дайте подсказку.
+  - isCorrect должен отражать, был ли предоставлен правильный артикль
   {{/ifEquals}}
 
   {{#ifEquals wordType "verb"}}
-  VERB:
-  - Assess if the verb form and usage are appropriate in the given context.
-  - Consider variations and synonyms.
-  - Provide an explanation of why the input is correct or incorrect in terms of meaning and grammatical correctness.
-  - isCorrect should reflect if the answer is correct, based on meaning and grammatical correctness.
+  ГЛАГОЛ:
+  - Оцените, подходят ли форма и использование глагола в данном контексте.
+  - Рассмотрите варианты и синонимы.
+  - Предоставьте объяснение, почему ввод правильный или неправильный с точки зрения значения и грамматической правильности.
+  - isCorrect должен отражать правильность ответа с точки зрения значения и грамматической правильности.
   {{/ifEquals}}
 
   {{#ifEquals wordType "adjective"}}
-  ADJECTIVE:
-  - Assess if the adjective form and usage are appropriate in the given context.
-  - Consider variations and synonyms.
-  - Provide an explanation of why the input is correct or incorrect in terms of meaning and grammatical correctness.
-  - isCorrect should reflect if the answer is correct, based on meaning and grammatical correctness.
+  ПРИЛАГАТЕЛЬНОЕ:
+  - Оцените, подходят ли форма и использование прилагательного в данном контексте.
+  - Рассмотрите варианты и синонимы.
+  - Предоставьте объяснение, почему ввод правильный или неправильный с точки зрения значения и грамматической правильности.
+  - isCorrect должен отражать правильность ответа с точки зрения значения и грамматической правильности.
   {{/ifEquals}}
 
     {{#ifEquals wordType "adverb"}}
-  ADVERB:
-  - Assess if the adverb form and usage are appropriate in the given context.
-  - Consider variations and synonyms.
-  - Provide an explanation of why the input is correct or incorrect in terms of meaning and grammatical correctness.
-  - isCorrect should reflect if the answer is correct, based on meaning and grammatical correctness.
+  НАРЕЧИЕ:
+  - Оцените, подходят ли форма и использование наречия в данном контексте.
+  - Рассмотрите варианты и синонимы.
+  - Предоставьте объяснение, почему ввод правильный или неправильный с точки зрения значения и грамматической правильности.
+  - isCorrect должен отражать правильность ответа с точки зрения значения и грамматической правильности.
   {{/ifEquals}}
 
   {{#ifEquals wordType "other"}}
-  OTHER:
-  - Assess if the usage is appropriate in the given context.
-  - Provide an explanation of why the input is correct or incorrect.
-  - isCorrect should reflect if the answer is correct.
+  ДРУГОЕ:
+  - Оцените, подходит ли использование в данном контексте.
+  - Предоставьте объяснение, почему ввод правильный или неправильный.
+  - isCorrect должен отражать правильность ответа.
   {{/ifEquals}}
 
-  Output the response as a JSON object with the following fields:
-  - isCorrect (boolean): true if the input is correct, false otherwise.
-  - explanation (string): A detailed explanation of why the input is correct or incorrect.
-  - hint (string, optional): A helpful hint to guide the user to the correct answer (if incorrect).
+  Выведите ответ в виде объекта JSON со следующими полями:
+  - isCorrect (boolean): true, если ввод правильный, иначе false.
+  - explanation (string): Подробное объяснение, почему ввод правильный или неправильный.
+  - hint (string, optional): Полезная подсказка, чтобы направить пользователя к правильному ответу (если неправильно).
   `, config: {
     safetySettings: [
       {
@@ -123,4 +123,3 @@ Handlebars.registerHelper('ifEquals', function(arg1, arg2, options) {
 });
 
 import Handlebars from 'handlebars';
-
