@@ -35,7 +35,7 @@ export const WordDetailsOutputSchema = z.object({
       perfect: z.string().describe('The perfect tense form (e.g., "ist gegangen").'),
       prateritum: z.string().describe('The full verb conjugation in the Präteritum (simple past) tense for all persons, formatted for readability.'),
       futurI: z.string().describe('The full verb conjugation in the Futur I (future) tense for all persons, formatted for readability.'),
-      verbGovernment: z.string().optional().describe('The case the verb governs (e.g., "Akkusativ", "Dativ", "Genitiv") or the preposition it is used with.'),
+      verbGovernment: z.string().optional().describe('The case the verb governs or the preposition it is used with, explained in Russian (e.g., "warten auf + Akkusativ (ждать кого-то/что-то)").'),
       isReflexive: z.boolean().optional().describe('Whether the verb is reflexive (used with "sich").'),
     })
     .optional()
@@ -51,14 +51,14 @@ export const WordDetailsOutputSchema = z.object({
   prepositionDetails: z
     .object({
         case: z.enum(['Akkusativ', 'Dativ', 'Genitiv', 'Wechselpräposition']).describe('The case the preposition is used with (e.g., Akkusativ, Dativ, Genitiv, or Wechselpräposition for two-way prepositions).'),
-        dualCaseExplanation: z.string().optional().describe('For Wechselpräpositionen, an explanation of when to use Akkusativ (wohin?) and Dativ (wo?).'),
+        dualCaseExplanation: z.string().optional().describe('For Wechselpräpositionen, an explanation in Russian of when to use Akkusativ (куда?) and Dativ (где?).'),
         commonContractions: z.string().nullable().optional().describe('A string listing common contractions with articles, e.g., "in + dem = im, an + das = ans, von + dem = vom, zu + der = zur".'),
     })
     .optional()
     .describe('Details specific to prepositions.'),
   conjunctionDetails: z
     .object({
-        verbPosition: z.enum(['secondPosition', 'endOfSentence']).describe('The position of the verb in a clause introduced by this conjunction (e.g., "secondPosition" for coordinating conjunctions like "und", "endOfSentence" for subordinating conjunctions like "weil").'),
+        verbPosition: z.enum(['secondPosition', 'endOfSentence']).describe('The position of the verb in a clause introduced by this conjunction.'),
     })
     .optional()
     .describe('Details specific to conjunctions.'),
