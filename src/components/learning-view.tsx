@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface LearningViewProps {
   word: Word;
@@ -46,7 +47,7 @@ export function LearningView({ word }: LearningViewProps) {
       >
         {/* Front of the card */}
         <div className="absolute w-full h-full backface-hidden flex flex-col justify-between p-6">
-          <div>
+          <div className="flex-1 overflow-auto">
             <div className="flex justify-between items-start">
               <h2 className="font-headline text-4xl mb-2">
                 {renderArticle(nounDetails?.article)}{' '}{word.text}
@@ -74,29 +75,31 @@ export function LearningView({ word }: LearningViewProps) {
               )}
             </div>
           </div>
-          <div className="text-center text-muted-foreground text-sm">
+          <div className="text-center text-muted-foreground text-sm mt-4">
             <RefreshCw className="inline-block mr-2 h-4 w-4" />
             Нажмите, чтобы перевернуть
           </div>
         </div>
         
         {/* Back of the card */}
-        <div className="absolute w-full h-full backface-hidden rotate-y-180 flex flex-col justify-between p-6 bg-secondary">
-          <div>
+        <div className="absolute w-full h-full backface-hidden rotate-y-180 flex flex-col p-6 bg-secondary">
+          <div className="flex-1 flex flex-col min-h-0">
               <h2 className="font-headline text-4xl mb-4 text-secondary-foreground">{translation}</h2>
-              <div className="space-y-3">
+              <div className="flex-1 space-y-3 min-h-0">
                   <h3 className="font-semibold text-secondary-foreground">Примеры:</h3>
-                  <ul className="list-disc list-inside space-y-2 text-sm">
-                      {examples.map((ex, i) => (
-                          <li key={i}>
-                              <p className="text-secondary-foreground">{ex.german}</p>
-                              <p className="text-muted-foreground">{ex.russian}</p>
-                          </li>
-                      ))}
-                  </ul>
+                   <ScrollArea className="h-full pr-4">
+                      <ul className="list-disc list-inside space-y-2 text-sm">
+                          {examples.map((ex, i) => (
+                              <li key={i}>
+                                  <p className="text-secondary-foreground">{ex.german}</p>
+                                  <p className="text-muted-foreground">{ex.russian}</p>
+                              </li>
+                          ))}
+                      </ul>
+                   </ScrollArea>
               </div>
           </div>
-           <div className="text-center text-muted-foreground text-sm">
+           <div className="text-center text-muted-foreground text-sm mt-4">
              <RefreshCw className="inline-block mr-2 h-4 w-4" />
             Нажмите, чтобы перевернуть
           </div>
