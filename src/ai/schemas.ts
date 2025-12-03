@@ -52,7 +52,7 @@ export const WordDetailsOutputSchema = z.object({
     .object({
         case: z.enum(['Akkusativ', 'Dativ', 'Genitiv', 'Wechselpräposition']).describe('The case the preposition is used with (e.g., Akkusativ, Dativ, Genitiv, or Wechselpräposition for two-way prepositions).'),
         dualCaseExplanation: z.string().optional().describe('For Wechselpräpositionen, an explanation of when to use Akkusativ (wohin?) and Dativ (wo?).'),
-        commonContractions: z.string().nullable().optional().describe('Common contractions with articles (e.g., "in + dem = im", "an + das = ans").'),
+        commonContractions: z.string().nullable().optional().describe('A string listing common contractions with articles, e.g., "in + dem = im, an + das = ans, von + dem = vom, zu + der = zur".'),
     })
     .optional()
     .describe('Details specific to prepositions.'),
