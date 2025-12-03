@@ -9,7 +9,6 @@ import { Progress } from '@/components/ui/progress';
 import { LearningView } from '@/components/learning-view';
 import { fetchQuizQuestion, checkArticle } from '@/lib/actions';
 import type { GenerateQuizQuestionOutput, IntelligentErrorCorrectionOutput } from '@/ai/schemas';
-import { Skeleton } from './ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -39,13 +38,13 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
 
   const determineNextView = useCallback((word: Word) => {
     // New word, first time seeing it
-    if (word.repetitions === 0) {
+    if (word.repetitions < 2) {
       return 'flashcard';
     }
     // It's a noun and we haven't mastered it yet (easeFactor is a proxy for mastery)
-    if (word.details.partOfSpeech === 'noun' && word.easeFactor < 2.5) {
-      // 50% chance to get an article quiz to add variety
-      if (Math.random() > 0.5) {
+    if (word.details.partOfSpeech === 'noun' && word.easeFactor < 2.8) {
+      // Give article quiz more often for nouns that are being learned
+      if (Math.random() > 0.4) {
         return 'article-quiz';
       }
     }
