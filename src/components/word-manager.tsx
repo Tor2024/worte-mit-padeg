@@ -1,89 +1,63 @@
 "use client";
 
-import { useState, useTransition, useEffect, useCallback } from 'react';
-import type { Word, WordType } from '@/lib/types';
+import { useState, useTransition } from 'react';
+import type { Word } from '@/lib/types';
 import { LearningView } from '@/components/learning-view';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BookMarked, Sparkles, Wand2, Loader2 } from 'lucide-react';
+import { BookMarked, Sparkles, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getPartOfSpeech } from '@/lib/actions';
+import { fetchWordDetails } from '@/lib/actions';
 
 export function WordManager() {
   const [currentWord, setCurrentWord] = useState<Word | null>(null);
   const [inputValue, setInputValue] = useState('');
-  const [wordType, setWordType] = useState<WordType>('other');
-  const [article, setArticle] = useState<'der' | 'die' | 'das' | null>(null);
-  const [showArticle, setShowArticle] = useState(false);
   const { toast } = useToast();
-  const [isAiPending, startAiTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
 
-  const handleWordTypeChange = useCallback((newType: WordType) => {
-    setWordType(newType);
-    if (newType === 'noun') {
-      setShowArticle(true);
-    } else {
-      setShowArticle(false);
-      setArticle(null);
+  const handleStartLearning = () => {
+    if (!inputValue.trim()) {
+      toast({
+        title: "Пустой ввод",
+        description: "Пожалуйста, введите слово для изучения.",
+        variant: "destructive",
+      });
+      return;
     }
-  }, []);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setInputValue(value);
-    // Automatically suggest 'noun' if the word starts with a capital letter
-    if (value.length > 0 && value.charAt(0) === value.charAt(0).toUpperCase() && value.split(" ").length === 1) {
-      if (wordType !== 'noun') {
-         handleWordTypeChange('noun');
-      }
-    }
-  };
-  
-  const handleAutoDetect = () => {
-    if (!inputValue.trim()) return;
-    startAiTransition(async () => {
-      const result = await getPartOfSpeech(inputValue.trim());
+    
+    startTransition(async () => {
+      const result = await fetchWordDetails(inputValue.trim());
       if (result.success) {
-        handleWordTypeChange(result.data.partOfSpeech);
+        setCurrentWord({
+          text: inputValue.trim(),
+          details: result.data,
+        });
       } else {
         toast({
-          title: "Ошибка",
+          title: "Ошибка ИИ",
           description: result.error,
           variant: "destructive",
         });
       }
     });
   };
-
-  const handleStartLearning = () => {
-    if (!inputValue.trim()) return;
-    if (wordType === 'noun' && !article) {
-        toast({
-            title: "Артикль отсутствует",
-            description: "Пожалуйста, выберите артикль для существительного.",
-            variant: "destructive",
-        })
-        return;
-    }
-
-    setCurrentWord({
-      text: inputValue.trim(),
-      type: wordType,
-      article: wordType === 'noun' ? article! : undefined,
-    });
-  };
   
   const handleReset = () => {
     setCurrentWord(null);
     setInputValue('');
-    setWordType('other');
-    setArticle(null);
-    setShowArticle(false);
   };
+
+  if (isPending) {
+    return (
+      <div className="w-full max-w-xl flex flex-col items-center justify-center text-center p-8">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-lg text-muted-foreground">Анализируем слово...</p>
+        <p className="text-sm text-muted-foreground">ИИ подбирает для вас лучшие материалы.</p>
+      </div>
+    );
+  }
 
   if (currentWord) {
     return <LearningView word={currentWord} onReset={handleReset} />;
@@ -98,73 +72,25 @@ export function WordManager() {
                     Давайте выучим новое слово!
                 </CardTitle>
                 <CardDescription>
-                    Введите немецкое слово или фразу, чтобы начать.
+                    Введите немецкое слово или фразу, чтобы получить полную информацию для изучения.
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <form onSubmit={(e) => { e.preventDefault(); handleStartLearning(); }} className="space-y-6">
                     <div className="space-y-2">
                         <Label htmlFor="word-input">Слово / Фраза</Label>
-                        <div className="flex gap-2">
-                            <Input 
-                                id="word-input" 
-                                placeholder="например, Haus, gehen, schön" 
-                                value={inputValue}
-                                onChange={handleInputChange}
-                            />
-                            <Button type="button" variant="outline" onClick={handleAutoDetect} disabled={!inputValue.trim() || isAiPending}>
-                                {isAiPending ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                    <Wand2 className="h-4 w-4" />
-                                )}
-                                <span className="sr-only">Определить часть речи</span>
-                            </Button>
-                        </div>
+                        <Input 
+                            id="word-input" 
+                            placeholder="например, Haus, gehen, schön" 
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value)}
+                        />
                     </div>
                     
-                    <div className="space-y-2">
-                        <Label>Часть речи</Label>
-                        <Select onValueChange={(value) => handleWordTypeChange(value as WordType)} value={wordType}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Выберите часть речи" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="noun">Существительное</SelectItem>
-                                <SelectItem value="verb">Глагол</SelectItem>
-                                <SelectItem value="adjective">Прилагательное</SelectItem>
-                                <SelectItem value="adverb">Наречие</SelectItem>
-                                <SelectItem value="other">Другое</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    {showArticle && (
-                        <div className="space-y-3 rounded-md border p-4 animate-in fade-in-50">
-                            <Label className="font-semibold">Артикль</Label>
-                            <RadioGroup onValueChange={(v) => setArticle(v as 'der' | 'die' | 'das')} value={article || ''}>
-                                <div className="flex items-center space-x-6">
-                                    <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="der" id="der" />
-                                        <Label htmlFor="der" className="cursor-pointer">der</Label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="die" id="die" />
-                                        <Label htmlFor="die" className="cursor-pointer">die</Label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="das" id="das" />
-                                        <Label htmlFor="das" className="cursor-pointer">das</Label>
-                                    </div>
-                                </div>
-                            </RadioGroup>
-                        </div>
-                    )}
-
                     <Button 
                         type="submit" 
                         className="w-full"
-                        disabled={!inputValue.trim()}
+                        disabled={!inputValue.trim() || isPending}
                     >
                         Начать обучение
                         <Sparkles className="ml-2 h-4 w-4" />

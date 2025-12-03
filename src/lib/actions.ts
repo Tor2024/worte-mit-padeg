@@ -1,59 +1,14 @@
 'use server';
 
-import {
-  generateUsageExamples,
-  provideIntelligentErrorCorrection,
-  generateNewSentences,
-  determinePartOfSpeech,
-} from '@/ai/flows';
+import { getWordDetails } from '@/ai/flows';
+import type { WordDetailsOutput } from '@/ai/flows';
 
-import type { Word } from './types';
-import type { IntelligentErrorCorrectionOutput, GenerateNewSentencesOutput, DeterminePartOfSpeechOutput } from '@/ai/flows';
-
-export async function getUsageExamples(word: string): Promise<{ success: true, data: string[] } | { success: false, error: string }> {
+export async function fetchWordDetails(word: string): Promise<{ success: true, data: WordDetailsOutput } | { success: false, error: string }> {
   try {
-    const result = await generateUsageExamples({ wordOrPhrase: word });
-    return { success: true, data: result.exampleSentences };
-  } catch (error) {
-    console.error(error);
-    return { success: false, error: 'Не удалось сгенерировать примеры.' };
-  }
-}
-
-export async function checkArticle(word: Word, selectedArticle: 'der' | 'die' | 'das'): Promise<{ success: true, data: IntelligentErrorCorrectionOutput } | { success: false, error: string }> {
-  if (word.type !== 'noun' || !word.article) {
-    return { success: false, error: 'Это не является допустимым существительным для викторины.' };
-  }
-  try {
-    const result = await provideIntelligentErrorCorrection({
-      word: word.text,
-      userInput: selectedArticle,
-      wordType: 'noun',
-      expectedArticle: word.article,
-    });
+    const result = await getWordDetails({ wordOrPhrase: word });
     return { success: true, data: result };
   } catch (error) {
     console.error(error);
-    return { success: false, error: 'Не удалось проверить артикль.' };
-  }
-}
-
-export async function getAiPractice(word: string): Promise<{ success: true, data: GenerateNewSentencesOutput } | { success: false, error: string }> {
-  try {
-    const result = await generateNewSentences({ word: word });
-    return { success: true, data: result };
-  } catch (error) {
-    console.error(error);
-    return { success: false, error: 'Не удалось сгенерировать практическое задание.' };
-  }
-}
-
-export async function getPartOfSpeech(word: string): Promise<{ success: true, data: DeterminePartOfSpeechOutput } | { success: false, error: string }> {
-  try {
-    const result = await determinePartOfSpeech({ wordOrPhrase: word });
-    return { success: true, data: result };
-  } catch (error) {
-    console.error(error);
-    return { success: false, error: 'Не удалось определить часть речи.' };
+    return { success: false, error: 'Не удалось получить информацию о слове.' };
   }
 }

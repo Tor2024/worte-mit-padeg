@@ -1,17 +1,20 @@
 "use client";
 
 import { useState, useTransition } from 'react';
-import type { Word } from '@/lib/types';
-import { checkArticle } from '@/lib/actions';
-import type { IntelligentErrorCorrectionOutput } from '@/ai/flows';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { provideIntelligentErrorCorrection } from '@/ai/flows/provide-intelligent-error-correction';
+import type { IntelligentErrorCorrectionOutput } from '@/ai/flows/provide-intelligent-error-correction';
 
 interface ArticleQuizProps {
-    word: Word;
+    word: {
+      text: string;
+      type: 'noun';
+      article: 'der' | 'die' | 'das';
+    };
 }
 
 type QuizResult = IntelligentErrorCorrectionOutput;
@@ -26,16 +29,22 @@ export function ArticleQuiz({ word }: ArticleQuizProps) {
     const handleCheck = (selectedArticle: 'der' | 'die' | 'das') => {
         setSelected(selectedArticle);
         startTransition(async () => {
-            const res = await checkArticle(word, selectedArticle);
-            if (res.success) {
-                setResult(res.data);
-            } else {
-                toast({
-                    title: "Ошибка",
-                    description: res.error,
-                    variant: "destructive"
-                })
-            }
+          try {
+            const res = await provideIntelligentErrorCorrection({
+              word: word.text,
+              userInput: selectedArticle,
+              wordType: 'noun',
+              expectedArticle: word.article,
+            });
+            setResult(res);
+          } catch (error) {
+            console.error(error);
+            toast({
+                title: "Ошибка",
+                description: "Не удалось проверить артикль.",
+                variant: "destructive"
+            })
+          }
         });
     };
     
