@@ -52,7 +52,7 @@ export function LearningSession({ words, onEndSession }: LearningSessionProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl h-[60vh] flex flex-col p-0 gap-0">
+      <DialogContent className="max-w-2xl min-h-[500px] h-auto flex flex-col p-0 gap-0">
         <DialogHeader className="p-6 pb-4">
           <DialogTitle className="font-headline text-2xl">Изучение слов</DialogTitle>
           <DialogDescription>

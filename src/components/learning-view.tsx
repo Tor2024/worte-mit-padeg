@@ -5,7 +5,6 @@ import type { Word } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface LearningViewProps {
@@ -57,7 +56,7 @@ export function LearningView({ word }: LearningViewProps) {
       >
         {/* Front of the card */}
         <div className="absolute w-full h-full backface-hidden flex flex-col justify-between p-6">
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 flex flex-col min-h-0">
             <div className="flex justify-between items-start">
               <h2 className="font-headline text-4xl mb-2">
                 {renderArticle(nounDetails?.article)}{' '}{word.text}
@@ -65,28 +64,30 @@ export function LearningView({ word }: LearningViewProps) {
               <Badge variant="outline">{getPartOfSpeechRussian(partOfSpeech)}</Badge>
             </div>
 
-            <div className="space-y-4 text-sm mt-4">
-              {partOfSpeech === 'noun' && nounDetails && (
-                <>
-                  <p><span className="font-semibold text-muted-foreground">Мн. число:</span> {nounDetails.plural}</p>
-                </>
-              )}
-              {partOfSpeech === 'verb' && verbDetails && (
-                <>
-                  <p><span className="font-semibold text-muted-foreground">Perfekt:</span> {verbDetails.perfect}</p>
-                  <div>
-                    <p className="font-semibold text-muted-foreground mb-1">Präsens:</p>
-                    <p className="whitespace-pre-wrap font-mono text-xs">{verbDetails.presentTense}</p>
-                  </div>
-                </>
-              )}
-               {partOfSpeech === 'preposition' && prepositionDetails && (
-                <p><span className="font-semibold text-muted-foreground">Падеж:</span> {prepositionDetails.case}</p>
-              )}
-              {partOfSpeech === 'conjunction' && conjunctionDetails && (
-                <p><span className="font-semibold text-muted-foreground">Порядок слов:</span> {getVerbPositionRussian(conjunctionDetails.verbPosition)}</p>
-              )}
-            </div>
+            <ScrollArea className="flex-1 pr-4 -mr-4">
+              <div className="space-y-4 text-sm mt-4">
+                {partOfSpeech === 'noun' && nounDetails && (
+                  <>
+                    <p><span className="font-semibold text-muted-foreground">Мн. число:</span> {nounDetails.plural}</p>
+                  </>
+                )}
+                {partOfSpeech === 'verb' && verbDetails && (
+                  <>
+                    <p><span className="font-semibold text-muted-foreground">Perfekt:</span> {verbDetails.perfect}</p>
+                    <div>
+                      <p className="font-semibold text-muted-foreground mb-1">Präsens:</p>
+                      <p className="whitespace-pre-wrap font-mono text-xs">{verbDetails.presentTense}</p>
+                    </div>
+                  </>
+                )}
+                 {partOfSpeech === 'preposition' && prepositionDetails && (
+                  <p><span className="font-semibold text-muted-foreground">Падеж:</span> {prepositionDetails.case}</p>
+                )}
+                {partOfSpeech === 'conjunction' && conjunctionDetails && (
+                  <p><span className="font-semibold text-muted-foreground">Порядок слов:</span> {getVerbPositionRussian(conjunctionDetails.verbPosition)}</p>
+                )}
+              </div>
+            </ScrollArea>
           </div>
           <div className="text-center text-muted-foreground text-sm mt-4">
             <RefreshCw className="inline-block mr-2 h-4 w-4" />
@@ -97,11 +98,11 @@ export function LearningView({ word }: LearningViewProps) {
         {/* Back of the card */}
         <div className="absolute w-full h-full backface-hidden rotate-y-180 flex flex-col p-6 bg-secondary">
           <div className="flex-1 flex flex-col min-h-0">
-              <h2 className="font-headline text-4xl mb-4 text-secondary-foreground">{translation}</h2>
-              <div className="flex-1 space-y-3 min-h-0">
+              <h2 className="font-headline text-3xl mb-3 text-secondary-foreground">{translation}</h2>
+              <div className="flex-1 space-y-2 min-h-0">
                   <h3 className="font-semibold text-secondary-foreground">Примеры:</h3>
-                   <ScrollArea className="h-full pr-4">
-                      <ul className="list-disc list-inside space-y-2 text-sm">
+                   <ScrollArea className="h-full pr-4 -mr-4">
+                      <ul className="space-y-2 text-sm">
                           {examples.map((ex, i) => (
                               <li key={i}>
                                   <p className="text-secondary-foreground">{ex.german}</p>
