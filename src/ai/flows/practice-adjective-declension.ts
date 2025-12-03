@@ -29,7 +29,7 @@ const prompt = ai.definePrompt({
 - Noun: {{noun}} ({{nounArticle}})
 - Adjective: {{adjective}}
 - Target Case: {{targetCase}}
-- Article Type: {{articleType}} ('der/die/das' or 'ein/eine')
+- Article Type: {{articleType}} ('definite' for der/die/das or 'indefinite' for ein/eine)
 - User's Answer: "{{userInput}}"
 
 **Your Task:**
@@ -49,7 +49,7 @@ const prompt = ai.definePrompt({
         - Provide the \`correctAnswer\`.
         - Write a comprehensive but clear \`explanation\` in Russian. This explanation is crucial. It must include:
             a. A clear statement of what the error was (e.g., wrong article, wrong adjective ending, wrong article type).
-            b. **If the user used an indefinite article instead of a definite one, or vice-versa, explain WHY the definite/indefinite article is required here.** For example: "Здесь требуется определенный артикль 'dem', а не неопределенный 'einem', так как в этом контексте мы говорим о конкретном, уже известном доме."
+            b. **If the user used an indefinite article instead of a definite one, or vice-versa, explain WHY the requested article type was correct.** For example: "Задание требовало использовать определенный артикль 'dem', а не неопределенный 'einem', так как..."
             c. A step-by-step breakdown of the grammatical rule. Explain *why* the correct ending is what it is. Refer to the case, the gender of the noun, and the type of article (definite, indefinite).
             d. Explicitly state the correct ending and why it's used. For example: "Для существительных мужского рода в винительном падеже с неопределенным артиклем прилагательное получает окончание '-en'."
 

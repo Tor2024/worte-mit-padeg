@@ -29,7 +29,6 @@ type Task = {
   nounArticle: 'der' | 'die' | 'das';
   targetCase: 'Nominativ' | 'Akkusativ' | 'Dativ' | 'Genitiv';
   articleType: 'definite' | 'indefinite';
-  nominativeForm: string;
 };
 
 type AnswerStatus = 'unanswered' | 'checking' | 'correct' | 'incorrect';
@@ -58,7 +57,6 @@ const generateTask = (dictionary: Word[]): Task | null => {
     nounArticle: nounDetails.article,
     targetCase,
     articleType,
-    nominativeForm: `${nounDetails.article} ${adjWord.text} ${nounWord.text}`,
   };
 };
 
@@ -117,6 +115,8 @@ export function AdjectiveTrainer({ dictionary, onEndSession }: AdjectiveTrainerP
         </div>
       );
     }
+    
+    const nominativeForm = `${task.articleType === 'definite' ? task.nounArticle : (task.nounArticle === 'die' ? 'eine' : 'ein')} ${task.adjective} ${task.noun}`;
 
     return (
       <Card className="border-none shadow-none">
@@ -124,7 +124,7 @@ export function AdjectiveTrainer({ dictionary, onEndSession }: AdjectiveTrainerP
           <div className="text-center">
             <p className="text-muted-foreground">Поставьте фразу в нужную форму:</p>
             <h2 className="font-headline text-2xl my-2">
-              <span className="font-normal text-muted-foreground">({task.nominativeForm})</span>
+              <span className="font-normal text-muted-foreground">({nominativeForm})</span>
             </h2>
             <p className="font-semibold text-lg">
               Падеж: <span className="text-primary">{task.targetCase}</span>, Артикль: <span className="text-primary">{task.articleType === 'definite' ? 'Определенный' : 'Неопределенный'}</span>
