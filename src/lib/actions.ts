@@ -1,7 +1,7 @@
 'use server';
 
-import { getWordDetails, provideIntelligentErrorCorrection, generateQuizQuestion, practiceAdjectiveDeclension, checkRecallAnswer as checkRecallAnswerFlow } from '@/ai/flows';
-import type { WordDetailsOutput, IntelligentErrorCorrectionInput, IntelligentErrorCorrectionOutput, GenerateQuizQuestionInput, GenerateQuizQuestionOutput, AdjectivePracticeInput, AdjectivePracticeOutput, CheckRecallInput, CheckRecallOutput } from '@/ai/schemas';
+import { getWordDetails, provideIntelligentErrorCorrection, generateQuizQuestion, practiceAdjectiveDeclension, checkRecallAnswer as checkRecallAnswerFlow, generateFillInTheBlank } from '@/ai/flows';
+import type { WordDetailsOutput, IntelligentErrorCorrectionInput, IntelligentErrorCorrectionOutput, GenerateQuizQuestionInput, GenerateQuizQuestionOutput, AdjectivePracticeInput, AdjectivePracticeOutput, CheckRecallInput, CheckRecallOutput, GenerateFillInTheBlankInput, GenerateFillInTheBlankOutput } from '@/ai/schemas';
 
 export async function fetchWordDetails(word: string, partOfSpeech?: any): Promise<{ success: true, data: WordDetailsOutput } | { success: false, error: string }> {
   try {
@@ -13,7 +13,7 @@ export async function fetchWordDetails(word: string, partOfSpeech?: any): Promis
   }
 }
 
-export async function checkArticle(input: IntelligentErrorCorrectionInput): Promise<{ success: true, data: IntelligentErrorCorrectionOutput } | { success: false, error: string }> {
+export async function checkAnswer(input: IntelligentErrorCorrectionInput): Promise<{ success: true, data: IntelligentErrorCorrectionOutput } | { success: false, error: string }> {
     try {
         const result = await provideIntelligentErrorCorrection(input);
         return { success: true, data: result };
@@ -50,5 +50,15 @@ export async function checkRecallAnswer(input: CheckRecallInput): Promise<{ succ
     } catch (error) {
         console.error(error);
         return { success: false, error: 'Не удалось проверить перевод.' };
+    }
+}
+
+export async function fetchFillInTheBlank(input: GenerateFillInTheBlankInput): Promise<{ success: true, data: GenerateFillInTheBlankOutput } | { success: false, error: string }> {
+    try {
+        const result = await generateFillInTheBlank(input);
+        return { success: true, data: result };
+    } catch (error) {
+        console.error(error);
+        return { success: false, error: 'Не удалось создать упражнение "Заполните пропуск".' };
     }
 }

@@ -76,9 +76,10 @@ export const IntelligentErrorCorrectionInputSchema = z.object({
   userInput: z.string().describe('The user input that needs to be checked.'),
   wordType: z.enum(['noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'other']).describe('The type of the word.'),
   expectedArticle: z.string().optional().describe('The expected article for nouns (der, die, das). Only applicable if wordType is noun.'),
-  practiceType: z.enum(['perfect', 'prateritum']).optional().describe('The specific verb form being practiced.'),
+  practiceType: z.enum(['perfect', 'prateritum', 'fill-in-the-blank']).optional().describe('The specific verb form being practiced.'),
   expectedAnswer: z.string().optional().describe('The expected correct answer for the practice type.'),
   knownSynonyms: z.array(z.string()).optional().describe('Known synonyms for the word, if any.'),
+  sentenceContext: z.string().optional().describe('The sentence in which the word was used, with a blank for the word. For fill-in-the-blank checks.'),
 });
 export type IntelligentErrorCorrectionInput = z.infer<typeof IntelligentErrorCorrectionInputSchema>;
 
@@ -144,3 +145,19 @@ export const CheckRecallOutputSchema = z.object({
   explanation: z.string().describe('A clear explanation of why the answer is correct, incorrect, or a synonym.'),
 });
 export type CheckRecallOutput = z.infer<typeof CheckRecallOutputSchema>;
+
+
+// Schema for generate-fill-in-the-blank flow
+export const GenerateFillInTheBlankInputSchema = z.object({
+    word: z.string().describe("The German word to be practiced."),
+    partOfSpeech: z.string().describe("The word's part of speech."),
+    example: ExampleSentenceSchema.describe("The example sentence to use for the exercise."),
+});
+export type GenerateFillInTheBlankInput = z.infer<typeof GenerateFillInTheBlankInputSchema>;
+
+export const GenerateFillInTheBlankOutputSchema = z.object({
+    sentenceWithBlank: z.string().describe('The German sentence with the target word replaced by "______".'),
+    correctAnswer: z.string().describe("The exact word (in its correct form) that was removed from the sentence."),
+    russianTranslation: z.string().describe("The Russian translation of the original sentence, for context."),
+});
+export type GenerateFillInTheBlankOutput = z.infer<typeof GenerateFillInTheBlankOutputSchema>;

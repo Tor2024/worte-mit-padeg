@@ -7,8 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ArrowLeft, ArrowRight, Loader2, Check, X, RefreshCw } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { LearningView } from '@/components/learning-view';
-import { fetchQuizQuestion, checkArticle, checkRecallAnswer } from '@/lib/actions';
-import type { GenerateQuizQuestionOutput, IntelligentErrorCorrectionOutput, CheckRecallOutput } from '@/ai/schemas';
+import { fetchQuizQuestion, checkAnswer, checkRecallAnswer, fetchFillInTheBlank } from '@/lib/actions';
+import type { GenerateQuizQuestionOutput, IntelligentErrorCorrectionOutput, CheckRecallOutput, GenerateFillInTheBlankOutput } from '@/ai/schemas';
 import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -23,7 +23,7 @@ interface UnifiedSessionProps {
   onWordUpdate: (word: Word) => void;
 }
 
-type SessionView = 'loading' | 'flashcard' | 'multiple-choice' | 'article-quiz' | 'verb-practice' | 'recall-quiz';
+type SessionView = 'loading' | 'flashcard' | 'multiple-choice' | 'article-quiz' | 'verb-practice' | 'recall-quiz' | 'fill-in-the-blank';
 type AnswerStatus = 'unanswered' | 'correct' | 'incorrect' | 'synonym';
 type VerbPracticeType = 'perfect' | 'prateritum';
 
@@ -37,11 +37,23 @@ const formatCaseName = (caseName: string): string => {
     }
 };
 
+const getPartOfSpeechRussian = (pos: string) => {
+    switch (pos) {
+      case 'noun': return 'существительное';
+      case 'verb': return 'глагол';
+      case 'adjective': return 'прилагательное';
+      case 'adverb': return 'наречие';
+      case 'preposition': return 'предлог';
+      case 'conjunction': return 'союз';
+      default: return 'другое';
+    }
+}
+
 export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSessionProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isOpen, setIsOpen] = useState(true);
   const [view, setView] = useState<SessionView>('loading');
-  const [quizData, setQuizData] = useState<GenerateQuizQuestionOutput | IntelligentErrorCorrectionOutput | CheckRecallOutput | null>(null);
+  const [quizData, setQuizData] = useState<GenerateQuizQuestionOutput | IntelligentErrorCorrectionOutput | CheckRecallOutput | GenerateFillInTheBlankOutput | null>(null);
   
   const [selectedOption, setSelectedOption] = useState<string | null>(null); // For radio/multiple choice
   const [inputValue, setInputValue] = useState(''); // For verb practice and recall
@@ -56,23 +68,36 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
       return 'flashcard';
     }
 
-    const random = Math.random();
-
-    // After a few reps, introduce recall quiz
-    if (word.repetitions > 1 && random < 0.35) {
-      return 'recall-quiz';
+    const availableViews: SessionView[] = ['multiple-choice'];
+    const weights: { [key in SessionView]?: number } = {
+        'multiple-choice': 0.3,
+        'recall-quiz': 0.3,
+        'fill-in-the-blank': 0.4,
+    };
+    
+    if (word.details.partOfSpeech === 'noun' && word.easeFactor < 2.8) {
+        availableViews.push('article-quiz');
+        weights['article-quiz'] = 0.3;
     }
     
-    if (word.details.partOfSpeech === 'noun' && word.easeFactor < 2.8 && random > 0.4) {
-      return 'article-quiz';
-    }
-    
-    if (word.details.partOfSpeech === 'verb' && word.easeFactor < 3.0 && random > 0.3) {
-        return 'verb-practice';
+    if (word.details.partOfSpeech === 'verb' && word.easeFactor < 3.0) {
+        availableViews.push('verb-practice');
+        weights['verb-practice'] = 0.35;
     }
 
-    // Default to multiple choice
-    return 'multiple-choice';
+    // Weighted random selection
+    const totalWeight = availableViews.reduce((sum, view) => sum + (weights[view] || 0), 0);
+    let random = Math.random() * totalWeight;
+
+    for (const view of availableViews) {
+        random -= (weights[view] || 0);
+        if (random <= 0) {
+            return view;
+        }
+    }
+
+    // Fallback to flashcard if something goes wrong
+    return 'flashcard';
   }, []);
 
   const loadView = useCallback(async (word: Word) => {
@@ -92,10 +117,8 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
         setQuizData(result.data);
         setView('multiple-choice');
       } else {
-        if (!result.success) {
-          console.error(result.error);
-        }
-        setView('flashcard'); // Fallback to flashcard on error or empty options
+        if (!result.success) console.error(result.error);
+        setView('flashcard'); // Fallback to flashcard
       }
     } else if (nextView === 'article-quiz') {
       setView('article-quiz');
@@ -104,6 +127,16 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
       setView('verb-practice');
     } else if (nextView === 'recall-quiz') {
       setView('recall-quiz');
+    } else if (nextView === 'fill-in-the-blank') {
+        const example = word.details.examples[Math.floor(Math.random() * word.details.examples.length)];
+        const result = await fetchFillInTheBlank({ word: word.text, partOfSpeech: word.details.partOfSpeech, example });
+        if (result.success) {
+            setQuizData(result.data);
+            setView('fill-in-the-blank');
+        } else {
+            if (!result.success) console.error(result.error);
+            setView('flashcard'); // Fallback to flashcard
+        }
     }
   }, [determineNextView]);
 
@@ -139,19 +172,24 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
   };
   
   const handleCheck = async () => {
-      if (!currentWord || (view !== 'verb-practice' && view !== 'recall-quiz' && !selectedOption) || ((view === 'verb-practice' || view === 'recall-quiz') && !inputValue)) return;
+      const isInputBased = ['verb-practice', 'recall-quiz', 'fill-in-the-blank'].includes(view);
+      if (!currentWord || (isInputBased && !inputValue) || (!isInputBased && !selectedOption)) return;
 
       let isCorrect = false;
       let isSynonym = false;
       
-      if (view === 'multiple-choice' && selectedOption) {
+      let result;
+      switch(view) {
+        case 'multiple-choice':
           const question = quizData as GenerateQuizQuestionOutput;
           isCorrect = selectedOption === question.correctAnswer;
           setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
-      } else if (view === 'article-quiz' && selectedOption) {
-          const result = await checkArticle({
+          break;
+
+        case 'article-quiz':
+          result = await checkAnswer({
               word: currentWord.text,
-              userInput: selectedOption,
+              userInput: selectedOption!,
               wordType: 'noun',
               expectedArticle: currentWord.details.nounDetails?.article
           });
@@ -160,48 +198,66 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
               isCorrect = result.data.isCorrect;
               setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
           } else {
-              console.error(result.error);
-              setAnswerStatus('incorrect');
+              console.error(result.error); setAnswerStatus('incorrect');
           }
-      } else if (view === 'verb-practice' && inputValue) {
-          const expectedAnswer = verbPracticeType === 'perfect' 
-              ? currentWord.details.verbDetails?.perfect 
-              : currentWord.details.verbDetails?.prateritum;
+          break;
+        
+        case 'verb-practice':
+            const expectedAnswer = verbPracticeType === 'perfect' 
+                ? currentWord.details.verbDetails?.perfect 
+                : currentWord.details.verbDetails?.prateritum;
+            result = await checkAnswer({
+                word: currentWord.text,
+                userInput: inputValue.trim(),
+                wordType: 'verb',
+                practiceType: verbPracticeType,
+                expectedAnswer: expectedAnswer,
+            });
+            if (result.success) {
+                setQuizData(result.data);
+                isCorrect = result.data.isCorrect;
+                setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
+            } else {
+                console.error(result.error); setAnswerStatus('incorrect');
+            }
+            break;
 
-          const result = await checkArticle({
-              word: currentWord.text,
-              userInput: inputValue.trim(),
-              wordType: 'verb',
-              practiceType: verbPracticeType,
-              expectedAnswer: expectedAnswer,
-          });
-
-          if (result.success) {
-              setQuizData(result.data);
-              isCorrect = result.data.isCorrect;
-              setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
-          } else {
-              console.error(result.error);
-              setAnswerStatus('incorrect');
-          }
-      } else if (view === 'recall-quiz' && inputValue) {
-          const result = await checkRecallAnswer({
-            russianWord: currentWord.details.translation,
-            germanWord: currentWord.text,
-            partOfSpeech: currentWord.details.partOfSpeech,
-            article: currentWord.details.nounDetails?.article,
-            userInput: inputValue.trim(),
-          });
-          if (result.success) {
-            setQuizData(result.data);
-            isCorrect = result.data.isCorrect;
-            isSynonym = result.data.isSynonym;
-            if (isSynonym) setAnswerStatus('synonym');
-            else setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
-          } else {
-            console.error(result.error);
-            setAnswerStatus('incorrect');
-          }
+        case 'recall-quiz':
+            result = await checkRecallAnswer({
+                russianWord: currentWord.details.translation,
+                germanWord: currentWord.text,
+                partOfSpeech: currentWord.details.partOfSpeech,
+                article: currentWord.details.nounDetails?.article,
+                userInput: inputValue.trim(),
+            });
+            if (result.success) {
+                setQuizData(result.data);
+                isCorrect = result.data.isCorrect;
+                isSynonym = result.data.isSynonym;
+                setAnswerStatus(isSynonym ? 'synonym' : (isCorrect ? 'correct' : 'incorrect'));
+            } else {
+                console.error(result.error); setAnswerStatus('incorrect');
+            }
+            break;
+        
+        case 'fill-in-the-blank':
+            const blankQuiz = quizData as GenerateFillInTheBlankOutput;
+            result = await checkAnswer({
+                word: currentWord.text,
+                userInput: inputValue.trim(),
+                wordType: currentWord.details.partOfSpeech,
+                practiceType: 'fill-in-the-blank',
+                expectedAnswer: blankQuiz.correctAnswer,
+                sentenceContext: blankQuiz.sentenceWithBlank,
+            });
+            if (result.success) {
+                setQuizData(result.data);
+                isCorrect = result.data.isCorrect;
+                setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
+            } else {
+                console.error(result.error); setAnswerStatus('incorrect');
+            }
+            break;
       }
       
       const quality = isSynonym ? 4 : (isCorrect ? 5 : 2); // 5 for correct, 4 for synonym, 2 for incorrect
@@ -345,13 +401,62 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                     </form>
 
                      {answerStatus !== 'unanswered' && feedback && (
-                        <Alert variant={answerStatus === 'incorrect' ? 'destructive' : (answerStatus === 'synonym' ? 'default' : 'default')} className="animate-in fade-in-50 w-full">
+                        <Alert variant={answerStatus === 'incorrect' ? 'destructive' : 'default'} className="animate-in fade-in-50 w-full">
                             {answerStatus === 'correct' ? <Check className="h-4 w-4" /> : (answerStatus === 'synonym' ? <RefreshCw className="h-4 w-4"/> : <X className="h-4 w-4" />) }
                             <AlertTitle>
                               {answerStatus === 'correct' && 'Правильно!'}
                               {answerStatus === 'incorrect' && 'Не совсем'}
                               {answerStatus === 'synonym' && 'Тоже верно!'}
                             </AlertTitle>
+                            <AlertDescription>
+                                <p>{feedback.explanation}</p>
+                            </AlertDescription>
+                        </Alert>
+                   )}
+                </CardContent>
+            </Card>
+        )
+    }
+
+    if (view === 'fill-in-the-blank') {
+        const blankQuiz = quizData as GenerateFillInTheBlankOutput;
+        const feedback = quizData as IntelligentErrorCorrectionOutput;
+
+        if (!blankQuiz?.sentenceWithBlank) {
+            return (
+                <div className="space-y-6 flex flex-col items-center justify-center h-full">
+                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                    <p className="text-muted-foreground">Создаем упражнение...</p>
+                </div>
+            )
+        }
+
+        return (
+            <Card className="border-none shadow-none">
+                <CardContent className="p-0 flex flex-col items-center gap-6">
+                    <h2 className="font-headline text-2xl text-center">Заполните пропуск:</h2>
+                    <p className="text-xl text-center font-serif bg-muted p-4 rounded-md w-full">
+                        {blankQuiz.sentenceWithBlank.split('______').map((part, index, arr) => 
+                            index === arr.length - 1 ? part : <>{part}<span className="font-bold text-primary">______</span></>
+                        )}
+                    </p>
+                    <p className="text-sm text-muted-foreground text-center">"{blankQuiz.russianTranslation}"</p>
+                    
+                    <form onSubmit={(e) => { e.preventDefault(); answerStatus === 'unanswered' ? handleCheck() : handleNext() }} className="w-full">
+                        <Input 
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value)}
+                            placeholder="Введите пропущенное слово"
+                            disabled={answerStatus !== 'unanswered'}
+                            className="text-center text-lg h-12"
+                            autoFocus
+                        />
+                    </form>
+
+                     {answerStatus !== 'unanswered' && feedback.explanation && (
+                        <Alert variant={answerStatus === 'correct' ? 'default' : 'destructive'} className="animate-in fade-in-50 w-full">
+                            {answerStatus === 'correct' ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                            <AlertTitle>{answerStatus === 'correct' ? 'Правильно!' : 'Не совсем'}</AlertTitle>
                             <AlertDescription>
                                 <p>{feedback.explanation}</p>
                             </AlertDescription>
@@ -427,7 +532,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     return null;
   }
 
-  const isQuiz = ['multiple-choice', 'article-quiz', 'verb-practice', 'recall-quiz'].includes(view);
+  const isQuiz = ['multiple-choice', 'article-quiz', 'verb-practice', 'recall-quiz', 'fill-in-the-blank'].includes(view);
   const showNextButton = !isQuiz || (isQuiz && answerStatus !== 'unanswered');
   const canCheck = (view === 'multiple-choice' || view === 'article-quiz') ? !!selectedOption : !!inputValue.trim();
 
