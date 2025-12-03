@@ -36,11 +36,12 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
   
   const currentWord = useMemo(() => words[currentIndex], [words, currentIndex]);
 
-  const determineNextView = useCallback((word: Word) => {
-    // New word, first time seeing it
-    if (word.repetitions < 2) {
+  const determineNextView = useCallback((word: Word): SessionView => {
+    // New word, first time seeing it or hasn't been answered correctly yet
+    if (word.repetitions < 1) {
       return 'flashcard';
     }
+    
     // It's a noun and we haven't mastered it yet (easeFactor is a proxy for mastery)
     if (word.details.partOfSpeech === 'noun' && word.easeFactor < 2.8) {
       // Give article quiz more often for nouns that are being learned
@@ -48,6 +49,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
         return 'article-quiz';
       }
     }
+
     // Default to a multiple choice question for variety
     return 'multiple-choice';
   }, []);
@@ -205,7 +207,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                             <AlertTitle>{answerStatus === 'correct' ? 'Правильно!' : 'Не совсем'}</AlertTitle>
                             <AlertDescription>
                                 {feedback.explanation}
-                                {feedback.hint && <p className="mt-2 text-xs opacity-80"><strong>Подсказка:</strong> {feedback.hint}</p>}
+                                {feedback.hint && <p className="mt-2 text-sm"><strong>Подсказка:</strong> {feedback.hint}</p>}
                             </AlertDescription>
                         </Alert>
                    )}
@@ -282,7 +284,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-xl flex flex-col p-0 gap-0 h-[600px]">
+      <DialogContent className="max-w-xl flex flex-col p-0 gap-0 h-[640px]">
         <DialogHeader className="p-6 pb-4">
           <DialogTitle className="font-headline text-2xl">Сессия обучения</DialogTitle>
           <DialogDescription>

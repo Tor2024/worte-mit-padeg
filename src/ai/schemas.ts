@@ -62,6 +62,7 @@ export const WordDetailsOutputSchema = z.object({
     .describe('Details specific to conjunctions.'),
   examples: z
     .array(ExampleSentenceSchema)
+    .min(3)
     .describe('An array of three distinct example sentences, each with German and Russian versions.'),
 });
 export type WordDetailsOutput = z.infer<typeof WordDetailsOutputSchema>;
@@ -80,7 +81,7 @@ export type IntelligentErrorCorrectionInput = z.infer<typeof IntelligentErrorCor
 export const IntelligentErrorCorrectionOutputSchema = z.object({
   isCorrect: z.boolean().describe('Whether the user input is correct or not.'),
   explanation: z.string().describe('The AI explanation for why the input is correct or incorrect.'),
-  hint: z.string().optional().describe('A helpful hint to guide the user to the correct answer.'),
+  hint: z.string().optional().describe('A helpful mnemonic hint to guide the user to the correct answer (for incorrect noun articles).'),
 });
 export type IntelligentErrorCorrectionOutput = z.infer<typeof IntelligentErrorCorrectionOutputSchema>;
 

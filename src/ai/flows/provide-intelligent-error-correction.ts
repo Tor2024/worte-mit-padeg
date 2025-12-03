@@ -15,6 +15,7 @@ import {
   type IntelligentErrorCorrectionInput,
   type IntelligentErrorCorrectionOutput,
 } from '@/ai/schemas';
+import Handlebars from 'handlebars';
 
 export async function provideIntelligentErrorCorrection(
   input: IntelligentErrorCorrectionInput
@@ -42,8 +43,14 @@ const prompt = ai.definePrompt({
   {{#ifEquals wordType "noun"}}
   СУЩЕСТВИТЕЛЬНОЕ:
   - Проверьте, является ли ввод пользователя ("{{userInput}}") правильным артиклем ("{{expectedArticle}}") для существительного "{{word}}".
-  - Если неверно, объясните, почему правильный артикль — "{{expectedArticle}}". По возможности дайте мнемоническую подсказку.
   - isCorrect должен отражать, был ли предоставлен правильный артикль.
+  - Если правильно, дайте короткое подтверждение.
+  - Если неверно:
+    1.  Объясните, почему правильный артикль — "{{expectedArticle}}".
+    2.  **Обязательно придумайте яркую, забавную или абсурдную мнемоническую подсказку (hint)**, чтобы помочь запомнить связь слова с его артиклем. Подсказка должна связывать род (мужской, женский, средний) с самим предметом.
+        *   Для 'der' (мужской род): ассоциируйте слово с чем-то мужским, сильным, большим (например, "ДЕРзкий директор").
+        *   Для 'die' (женский род): ассоциируйте с чем-то женским, красивым, изящным (например, "ДИвная дама").
+        *   Для 'das' (средний род): ассоциируйте с чем-то нейтральным, маленьким, абстрактным или даже странным (например, "ДАС и всё.", или что-то детское).
   - Ответ должен быть кратким и по существу.
   {{/ifEquals}}
 
@@ -81,7 +88,7 @@ const prompt = ai.definePrompt({
   Выведите ответ в виде объекта JSON со следующими полями:
   - isCorrect (boolean): true, если ввод правильный, иначе false.
   - explanation (string): Подробное объяснение, почему ввод правильный или неправильный.
-  - hint (string, optional): Полезная подсказка, чтобы направить пользователя к правильному ответу (если неправильно).
+  - hint (string, optional): Полезная мнемоническая подсказка, чтобы направить пользователя к правильному ответу (только если неправильно и только для существительных).
   `, config: {
     safetySettings: [
       {
@@ -113,5 +120,3 @@ Handlebars.registerHelper('ifEquals', function(arg1, arg2, options) {
   // @ts-ignore
   return (arg1 == arg2) ? options.fn(this) : options.inverse(this); //NOSONAR
 });
-
-import Handlebars from 'handlebars';
