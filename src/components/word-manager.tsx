@@ -90,7 +90,7 @@ export function WordManager() {
     fetchWordDetails(wordToAdd).then(result => {
         if (result.success) {
             const newWord: Word = { text: wordToAdd, details: result.data };
-            const newDictionary = [...dictionary, newWord];
+            const newDictionary = [newWord, ...dictionary];
             saveDictionary(newDictionary);
             setInputValue('');
             toast({ title: "Слово добавлено!", description: `"${wordToAdd}" успешно добавлен в ваш словарь.` });
