@@ -188,24 +188,17 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     if (isChecking || !currentWord || (isInputBased && !inputValue) || (!isInputBased && !selectedOption)) return;
 
     setIsChecking(true);
-
-    let quality: number;
-    let feedbackData: FeedbackType = null;
     let newStatus: AnswerStatus = 'incorrect';
 
     try {
-        switch(view) {
-        case 'multiple-choice': {
+        let feedbackData: FeedbackType = null;
+        if (view === 'multiple-choice') {
             const question = quizData as GenerateQuizQuestionOutput;
             const isCorrect = selectedOption === question.correctAnswer;
-            quality = isCorrect ? 5 : 2;
             newStatus = isCorrect ? 'correct' : 'incorrect';
-            setAnswerStatus(newStatus);
-            handleNext(quality);
-            break;
-        }
-
-        case 'article-quiz': {
+            // For multiple choice, we don't need AI feedback, just show correct/incorrect
+            // We'll advance immediately in the footer button logic for this simple case.
+        } else if (view === 'article-quiz') {
             const result = await checkAnswer({
                 word: currentWord.text,
                 userInput: selectedOption!,
@@ -214,13 +207,9 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
             });
             if (result.success) {
                 feedbackData = result.data;
-                quality = result.data.isCorrect ? 5 : 1;
                 newStatus = result.data.isCorrect ? 'correct' : 'incorrect';
             } else { throw new Error(result.error); }
-            break;
-        }
-        
-        case 'verb-practice': {
+        } else if (view === 'verb-practice') {
             const expectedAnswer = currentWord.details.verbDetails?.perfect;
             const result = await checkAnswer({
                 word: currentWord.text,
@@ -230,13 +219,9 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
             });
             if (result.success) {
                 feedbackData = result.data;
-                quality = result.data.isCorrect ? 5 : 1;
                 newStatus = result.data.isCorrect ? 'correct' : 'incorrect';
             } else { throw new Error(result.error); }
-            break;
-        }
-
-        case 'recall-quiz': {
+        } else if (view === 'recall-quiz') {
             const result = await checkRecallAnswer({
                 russianWord: currentWord.details.translation,
                 germanWord: currentWord.text,
@@ -244,15 +229,11 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                 article: currentWord.details.nounDetails?.article,
                 userInput: inputValue.trim(),
             });
-            if (result.success) {
+             if (result.success) {
                 feedbackData = result.data;
-                quality = result.data.isSynonym ? 4 : (result.data.isCorrect ? 5 : 1);
                 newStatus = result.data.isSynonym ? 'synonym' : (result.data.isCorrect ? 'correct' : 'incorrect');
             } else { throw new Error(result.error); }
-            break;
-        }
-        
-        case 'fill-in-the-blank': {
+        } else if (view === 'fill-in-the-blank') {
             const blankQuiz = quizData as GenerateFillInTheBlankOutput;
             const result = await checkAnswer({
                 word: currentWord.text,
@@ -263,27 +244,16 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
             });
             if (result.success) {
                 feedbackData = result.data;
-                quality = result.data.isCorrect ? 5 : 1;
                 newStatus = result.data.isCorrect ? 'correct' : 'incorrect';
             } else { throw new Error(result.error); }
-            break;
         }
-
-        default:
-            // This case should not be hit for quizzes
-            return;
-        }
-
-        if (view !== 'multiple-choice') {
-            setFeedback(feedbackData);
-            setAnswerStatus(newStatus);
-            // We need a way to move to the next card after showing feedback
-            // For now, let's keep the quality and move on when user clicks 'Next'
-        }
+        
+        setFeedback(feedbackData);
+        setAnswerStatus(newStatus);
 
     } catch (error) {
         console.error("Error during check:", error);
-        // Handle error display to user if needed
+        // Display error to the user via toast or an alert in the dialog
     } finally {
         setIsChecking(false);
     }
@@ -536,9 +506,15 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
           handleCheck();
       } else {
           let quality: number;
-          if (answerStatus === 'correct') quality = 5;
-          else if (answerStatus === 'synonym') quality = 4;
-          else quality = 1;
+          if (view === 'multiple-choice' && selectedOption === (quizData as GenerateQuizQuestionOutput)?.correctAnswer) {
+              quality = 5;
+          } else if (answerStatus === 'correct') {
+              quality = 5;
+          } else if (answerStatus === 'synonym') {
+              quality = 4;
+          } else {
+              quality = 1;
+          }
           handleNext(quality);
       }
   }
@@ -576,7 +552,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
             </div>
 
             {showCheckButton && (
-                <Button onClick={handleCheck} disabled={!canCheck || isChecking}>
+                <Button onClick={handleFooterButton} disabled={!canCheck || isChecking}>
                     {isChecking ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : null}
                     Проверить
                 </Button>
@@ -589,8 +565,8 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                 </Button>
             )}
 
-            {isFlashcard && (
-                 <Button variant="ghost" disabled={true} className="w-[98px]">
+            {!isQuiz && (
+                 <Button variant="ghost" disabled={true} className="w-[106px]">
                  </Button>
             )}
         </div>
@@ -600,3 +576,5 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     </Dialog>
   );
 }
+
+    

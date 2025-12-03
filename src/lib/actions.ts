@@ -76,3 +76,5 @@ export async function fetchCaseQuiz(input: GenerateCaseQuizInput): Promise<{ suc
         return { success: false, error: 'Не удалось создать викторину по падежам.' };
     }
 }
+
+    

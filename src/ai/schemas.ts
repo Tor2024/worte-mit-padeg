@@ -175,3 +175,4 @@ export const GenerateCaseQuizOutputSchema = z.object({
     correctAnswer: z.string().describe('The correct article that fills the blank, e.g., "den".'),
 });
 export type GenerateCaseQuizOutput = z.infer<typeof GenerateCaseQuizOutputSchema>;
+    
