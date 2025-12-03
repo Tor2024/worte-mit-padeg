@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Word } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,7 @@ import { fetchCaseQuiz, checkAnswer } from '@/lib/actions';
 import type { GenerateCaseQuizOutput, IntelligentErrorCorrectionOutput } from '@/ai/schemas';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 
 interface CaseTrainerProps {
   dictionary: Word[];
@@ -34,26 +35,36 @@ type Task = {
 };
 
 type AnswerStatus = 'unanswered' | 'checking' | 'correct' | 'incorrect';
+type CaseName = 'Nominativ' | 'Akkusativ' | 'Dativ' | 'Genitiv';
+type CaseStats = Record<CaseName, { correct: number; incorrect: number }>;
 
-// Helper function to generate a task
-const generateRandomTask = (dictionary: Word[]): { noun: string; preposition: string } | null => {
-  const nouns = dictionary.filter(w => w.details.partOfSpeech === 'noun' && w.details.nounDetails);
-  const prepositions = dictionary.filter(w => w.details.partOfSpeech === 'preposition' && w.details.prepositionDetails);
-
-  if (nouns.length === 0 || prepositions.length === 0) {
-    return null;
-  }
-
-  const nounWord = nouns[Math.floor(Math.random() * nouns.length)];
-  const prepWord = prepositions[Math.floor(Math.random() * prepositions.length)];
-
-  return {
-    noun: nounWord.text,
-    preposition: prepWord.text,
-  };
+const CASE_STATS_KEY = 'german-case-stats';
+const INITIAL_STATS: CaseStats = {
+  Nominativ: { correct: 0, incorrect: 0 },
+  Akkusativ: { correct: 0, incorrect: 0 },
+  Dativ: { correct: 0, incorrect: 0 },
+  Genitiv: { correct: 0, incorrect: 0 },
 };
 
-const caseOptions: GenerateCaseQuizOutput['correctCase'][] = ["Nominativ", "Akkusativ", "Dativ", "Genitiv"];
+// Helper function to get stats from local storage
+const getCaseStats = (): CaseStats => {
+  try {
+    const stats = localStorage.getItem(CASE_STATS_KEY);
+    return stats ? JSON.parse(stats) : INITIAL_STATS;
+  } catch (e) {
+    return INITIAL_STATS;
+  }
+};
+
+// Helper function to save stats to local storage
+const saveCaseStats = (stats: CaseStats) => {
+  try {
+    localStorage.setItem(CASE_STATS_KEY, JSON.stringify(stats));
+  } catch (e) {
+    console.error("Failed to save case stats", e);
+  }
+};
+
 
 export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
   const [isOpen, setIsOpen] = useState(true);
@@ -63,6 +74,92 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
   const [selectedCase, setSelectedCase] = useState<string | undefined>(undefined);
   const [answerStatus, setAnswerStatus] = useState<AnswerStatus>('unanswered');
   const [feedback, setFeedback] = useState<IntelligentErrorCorrectionOutput | null>(null);
+  const [caseStats, setCaseStats] = useState<CaseStats>(INITIAL_STATS);
+  const { toast } = useToast();
+
+  useEffect(() => {
+      setCaseStats(getCaseStats());
+  }, []);
+
+  const updateCaseStats = (caseName: CaseName, isCorrect: boolean) => {
+    const newStats = { ...caseStats };
+    if (isCorrect) {
+      newStats[caseName].correct++;
+    } else {
+      newStats[caseName].incorrect++;
+    }
+    setCaseStats(newStats);
+    saveCaseStats(newStats);
+  };
+  
+  // Helper function to generate a task with adaptive difficulty
+  const generateAdaptiveTask = useCallback((dictionary: Word[], currentStats: CaseStats): { noun: string; preposition: string } | null => {
+    const nouns = dictionary.filter(w => w.details.partOfSpeech === 'noun' && w.details.nounDetails);
+    const prepositions = dictionary.filter(w => w.details.partOfSpeech === 'preposition' && w.details.prepositionDetails);
+
+    if (nouns.length === 0 || prepositions.length === 0) {
+      return null;
+    }
+    
+    // Determine weights for each case based on performance
+    const caseWeights: Record<CaseName, number> = {
+        Nominativ: 1, // Lowest priority as it's less common in preposition quizzes
+        Akkusativ: 5,
+        Dativ: 5,
+        Genitiv: 5,
+    };
+
+    let totalAttempts = 0;
+    for (const caseName of Object.keys(currentStats) as CaseName[]) {
+        const stats = currentStats[caseName];
+        const attempts = stats.correct + stats.incorrect;
+        totalAttempts += attempts;
+        if (attempts > 0) {
+            const errorRate = stats.incorrect / attempts;
+            // Increase weight for cases with higher error rates. Max weight multiplier is 3 (for 100% error rate).
+            caseWeights[caseName] *= (1 + 2 * errorRate);
+        }
+    }
+
+    // If there are few attempts, increase randomness
+    if (totalAttempts < 20) {
+        Object.keys(caseWeights).forEach(c => caseWeights[c as CaseName] *= (Math.random() + 1));
+    }
+
+
+    // Select a case based on weights
+    const totalWeight = Object.values(caseWeights).reduce((a, b) => a + b, 0);
+    let random = Math.random() * totalWeight;
+    let targetCase: CaseName | null = null;
+    for (const caseName of Object.keys(caseWeights) as CaseName[]) {
+        random -= caseWeights[caseName];
+        if (random <= 0) {
+            targetCase = caseName;
+            break;
+        }
+    }
+    
+    if (!targetCase) targetCase = 'Akkusativ'; // Fallback
+    
+    // Find a preposition that matches the target case
+    let filteredPrepositions = prepositions.filter(p => {
+        const pCase = p.details.prepositionDetails?.case;
+        return pCase === targetCase || pCase === 'Wechselpräposition';
+    });
+
+    if (filteredPrepositions.length === 0) {
+        // Fallback if no matching prepositions are found
+        filteredPrepositions = prepositions;
+    }
+
+    const nounWord = nouns[Math.floor(Math.random() * nouns.length)];
+    const prepWord = filteredPrepositions[Math.floor(Math.random() * filteredPrepositions.length)];
+
+    return {
+      noun: nounWord.text,
+      preposition: prepWord.text,
+    };
+  }, []);
 
   const loadNextTask = useCallback(async () => {
     setIsLoading(true);
@@ -72,7 +169,7 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
     setAnswerStatus('unanswered');
     setFeedback(null);
 
-    const taskParams = generateRandomTask(dictionary);
+    const taskParams = generateAdaptiveTask(dictionary, caseStats);
     if (!taskParams) {
       setIsLoading(false);
       return;
@@ -87,12 +184,16 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
         quiz: result.data,
       });
     } else {
-      console.error("Failed to generate task, trying again.");
-      // Optionally show a toast and retry
-      setTimeout(loadNextTask, 1000); // Retry after a second
+      console.error("Failed to generate task:", result.error);
+       toast({
+        title: "Ошибка генерации",
+        description: "Не удалось создать задание. Попробуем еще раз.",
+        variant: "destructive",
+      });
+      setTimeout(loadNextTask, 1500); // Retry after a second
     }
     setIsLoading(false);
-  }, [dictionary]);
+  }, [dictionary, caseStats, generateAdaptiveTask, toast]);
 
   useEffect(() => {
     loadNextTask();
@@ -122,11 +223,18 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
 
     if (result.success) {
       setFeedback(result.data);
-      setAnswerStatus(result.data.isCorrect ? 'correct' : 'incorrect');
+      const isCorrect = result.data.isCorrect;
+      setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
+      // Update stats based on whether the CASE was identified correctly
+      updateCaseStats(task.quiz.correctCase, selectedCase === task.quiz.correctCase);
     } else {
       console.error(result.error);
       setAnswerStatus('unanswered');
-      // You might want to show a toast here
+      toast({
+        title: "Ошибка проверки",
+        description: "Не удалось проверить ваш ответ. Попробуйте снова.",
+        variant: "destructive",
+      });
     }
   };
   
@@ -137,12 +245,14 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
       return false;
   }
 
+  const caseOptions: GenerateCaseQuizOutput['correctCase'][] = ["Nominativ", "Akkusativ", "Dativ", "Genitiv"];
+
   const renderContent = () => {
     if (isLoading) {
       return (
         <div className="space-y-6 flex flex-col items-center justify-center h-full">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="text-muted-foreground">Генерируем задание...</p>
+            <p className="text-muted-foreground">Подбираем задание...</p>
         </div>
       );
     }
@@ -248,7 +358,7 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
             Тренажер падежей
           </DialogTitle>
           <DialogDescription>
-            Практикуйтесь в определении правильного падежа после предлогов.
+            Практикуйтесь в определении правильного падежа после предлогов. Система адаптируется к вашим ошибкам.
           </DialogDescription>
         </DialogHeader>
 
@@ -274,3 +384,5 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
     </Dialog>
   );
 }
+
+    
