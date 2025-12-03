@@ -26,11 +26,16 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert German language teacher creating a case-based quiz for a Russian-speaking student.
 
 **Task:**
-Create a sentence using the preposition "{{preposition}}" and the noun "{{noun}}". The sentence should have a blank space where the article and any adjective endings would go.
+Create a grammatically and logically correct sentence using the preposition "{{preposition}}" and the noun "{{noun}}". The sentence should have a blank space where the article and any adjective endings would go.
 
-**Instructions:**
+**CRITICAL Instructions:**
 
-1.  **Create a Contextual Sentence:** Form a simple, natural-sounding German sentence that uses the preposition "{{preposition}}" with the noun "{{noun}}". The sentence must clearly require a specific case. For two-way prepositions (Wechselpräpositionen), decide whether the context implies direction (Akkusativ) or location (Dativ).
+1.  **Create a Contextual and CORRECT Sentence:**
+    - Form a simple, natural-sounding, and **absolutely correct** German sentence.
+    - The verb and context you create **MUST** logically work with the given preposition "{{preposition}}".
+    - **DO NOT** create nonsensical sentences. For example, if the preposition is "bis", do not use the verb "warten", because "warten bis" is incorrect German ("warten auf" is correct). Your primary goal is correctness.
+    - The sentence must clearly require a specific case (Nominativ, Akkusativ, Dativ, or Genitiv).
+    - For two-way prepositions (Wechselpräpositionen), decide whether the context implies direction (Akkusativ) or location (Dativ) and create the sentence accordingly.
 
 2.  **Insert a Blank:** In the sentence, replace the article/determiner part of the noun phrase with "____". For example, "Ich fahre mit ____ Auto." or "Er geht in ____ Park.".
 
@@ -42,11 +47,6 @@ Create a sentence using the preposition "{{preposition}}" and the noun "{{noun}}
 
 **Output Format:**
 Your response must be a single JSON object that adheres to the \`GenerateCaseQuizOutputSchema\`.
-
--   \`sentence\`: The German sentence with the blank.
--   \`russianTranslation\`: The Russian translation.
--   \`correctCase\`: The correct case as a string ('Nominativ', 'Akkusativ', 'Dativ', 'Genitiv').
--   \`correctAnswer\`: The string that fills the blank.
 
 **Example 1 (Dativ):**
 - Input: { preposition: "mit", noun: "Auto" }

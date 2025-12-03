@@ -12,7 +12,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { ArrowRight, Loader2, Check, X, CaseSensitive } from 'lucide-react';
+import { ArrowRight, Loader2, Check, X, CaseSensitive, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -70,6 +70,7 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [task, setTask] = useState<Task | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [generationError, setGenerationError] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [selectedCase, setSelectedCase] = useState<string | undefined>(undefined);
   const [answerStatus, setAnswerStatus] = useState<AnswerStatus>('unanswered');
@@ -163,6 +164,7 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
 
   const loadNextTask = useCallback(async () => {
     setIsLoading(true);
+    setGenerationError(null);
     setTask(null);
     setInputValue('');
     setSelectedCase(undefined);
@@ -171,6 +173,7 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
 
     const taskParams = generateAdaptiveTask(dictionary, caseStats);
     if (!taskParams) {
+      setGenerationError("Для этого упражнения вам нужны как минимум одно существительное и один предлог в словаре.");
       setIsLoading(false);
       return;
     }
@@ -185,15 +188,10 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
       });
     } else {
       console.error("Failed to generate task:", result.error);
-       toast({
-        title: "Ошибка генерации",
-        description: "Не удалось создать задание. Попробуем еще раз.",
-        variant: "destructive",
-      });
-      setTimeout(loadNextTask, 1500); // Retry after a second
+      setGenerationError("Не удалось создать задание. AI не смог составить корректное предложение. Попробуем еще раз.");
     }
     setIsLoading(false);
-  }, [dictionary, caseStats, generateAdaptiveTask, toast]);
+  }, [dictionary, caseStats, generateAdaptiveTask]);
 
   useEffect(() => {
     loadNextTask();
@@ -239,6 +237,7 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
   };
   
   const isButtonDisabled = () => {
+      if (generationError) return false;
       if (answerStatus === 'unanswered') {
           return !inputValue.trim() || !selectedCase;
       }
@@ -253,6 +252,15 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
         <div className="space-y-6 flex flex-col items-center justify-center h-full">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
             <p className="text-muted-foreground">Подбираем задание...</p>
+        </div>
+      );
+    }
+
+    if (generationError) {
+      return (
+        <div className="space-y-6 flex flex-col items-center justify-center h-full text-center">
+            <AlertCircle className="h-12 w-12 text-destructive" />
+            <p className="text-muted-foreground">{generationError}</p>
         </div>
       );
     }
@@ -274,9 +282,9 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
           <div className="text-center w-full">
             <p className="text-muted-foreground">Заполните пропуск и выберите правильный падеж:</p>
             <h2 className="font-serif text-2xl my-2 bg-muted p-4 rounded-md">
-              {task.quiz.sentence.split('____').map((part, index, arr) => 
+              {task.quiz.sentence.split('____').map((part, index, arr) => (
                 <span key={index}>{index === arr.length - 1 ? part : <>{part}<span className="font-bold text-primary">____</span></>}</span>
-              )}
+              ))}
             </h2>
              <p className="text-sm text-muted-foreground">"{task.quiz.russianTranslation}"</p>
           </div>
@@ -284,7 +292,7 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
           <form
             onSubmit={e => {
               e.preventDefault();
-              if (answerStatus === 'unanswered') {
+              if (answerStatus === 'unanswered' && !generationError) {
                 handleCheck();
               } else {
                 loadNextTask();
@@ -349,6 +357,19 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
     );
   };
 
+  const handleFooterButtonClick = () => {
+    if (generationError) {
+        loadNextTask();
+        return;
+    }
+
+    if (answerStatus === 'unanswered') {
+        handleCheck();
+    } else {
+        loadNextTask();
+    }
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl flex flex-col p-0 gap-0 h-auto max-h-[90vh]">
@@ -368,17 +389,11 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
             <Button variant="ghost" onClick={handleClose}>
                 Завершить
             </Button>
-            {answerStatus === 'unanswered' ? (
-                <Button onClick={handleCheck} disabled={isButtonDisabled()}>
-                    {answerStatus === 'checking' ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : null}
-                    Проверить
-                </Button>
-            ) : (
-                <Button onClick={loadNextTask}>
-                    Далее
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-            )}
+            <Button onClick={handleFooterButtonClick} disabled={answerStatus === 'checking' || (answerStatus === 'unanswered' && !generationError && (!inputValue.trim() || !selectedCase))}>
+                {answerStatus === 'checking' ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : null}
+                {answerStatus === 'unanswered' && !generationError ? 'Проверить' : 'Далее'}
+                {answerStatus !== 'unanswered' || generationError ? <ArrowRight className="h-4 w-4 ml-2" /> : null}
+            </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
