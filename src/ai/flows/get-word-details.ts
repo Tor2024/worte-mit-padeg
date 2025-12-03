@@ -9,52 +9,12 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-
-const WordDetailsInputSchema = z.object({
-  wordOrPhrase: z
-    .string()
-    .describe('The German word or phrase to get details for.'),
-});
-export type WordDetailsInput = z.infer<typeof WordDetailsInputSchema>;
-
-const ExampleSentenceSchema = z.object({
-  german: z.string().describe('The example sentence in German.'),
-  russian: z.string().describe('The Russian translation of the sentence.'),
-});
-
-const WordDetailsOutputSchema = z.object({
-  translation: z.string().describe('The Russian translation of the word/phrase.'),
-  partOfSpeech: z
-    .enum(['noun', 'verb', 'adjective', 'adverb', 'preposition', 'other'])
-    .describe('The determined part of speech.'),
-  nounDetails: z
-    .object({
-      article: z
-        .enum(['der', 'die', 'das'])
-        .describe("The noun's article."),
-      plural: z.string().describe("The plural form of the noun."),
-    })
-    .optional()
-    .describe('Details specific to nouns.'),
-  verbDetails: z
-    .object({
-      presentTense: z.string().describe('The full verb conjugation in the present tense for all persons (ich, du, er/sie/es, wir, ihr, sie/Sie), formatted for readability.'),
-      perfect: z.string().describe('The perfect tense form (e.g., "ist gegangen").')
-    })
-    .optional()
-    .describe('Details specific to verbs.'),
-  prepositionDetails: z
-    .object({
-        case: z.enum(['Akkusativ', 'Dativ', 'Genitiv', 'Wechselpräposition']).describe('The case the preposition is used with (e.g., Akkusativ, Dativ, Genitiv, or Wechselpräposition for two-way prepositions).'),
-    })
-    .optional()
-    .describe('Details specific to prepositions.'),
-  examples: z
-    .array(ExampleSentenceSchema)
-    .describe('An array of example sentences, each with German and Russian versions.'),
-});
-export type WordDetailsOutput = z.infer<typeof WordDetailsOutputSchema>;
+import {
+  WordDetailsInputSchema,
+  WordDetailsOutputSchema,
+  type WordDetailsInput,
+  type WordDetailsOutput,
+} from '@/ai/schemas';
 
 export async function getWordDetails(
   input: WordDetailsInput

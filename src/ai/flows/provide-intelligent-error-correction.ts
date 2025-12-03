@@ -9,25 +9,12 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-
-const IntelligentErrorCorrectionInputSchema = z.object({
-  word: z.string().describe('The word or phrase entered by the user.'),
-  userInput: z.string().describe('The user input that needs to be checked.'),
-  wordType: z.enum(['noun', 'verb', 'adjective', 'adverb', 'other']).describe('The type of the word.'),
-  expectedArticle: z.string().optional().describe('The expected article for nouns (der, die, das). Only applicable if wordType is noun.'),
-  knownSynonyms: z.array(z.string()).optional().describe('Known synonyms for the word, if any.'),
-});
-
-export type IntelligentErrorCorrectionInput = z.infer<typeof IntelligentErrorCorrectionInputSchema>;
-
-const IntelligentErrorCorrectionOutputSchema = z.object({
-  isCorrect: z.boolean().describe('Whether the user input is correct or not.'),
-  explanation: z.string().describe('The AI explanation for why the input is correct or incorrect.'),
-  hint: z.string().optional().describe('A helpful hint to guide the user to the correct answer.'),
-});
-
-export type IntelligentErrorCorrectionOutput = z.infer<typeof IntelligentErrorCorrectionOutputSchema>;
+import {
+  IntelligentErrorCorrectionInputSchema,
+  IntelligentErrorCorrectionOutputSchema,
+  type IntelligentErrorCorrectionInput,
+  type IntelligentErrorCorrectionOutput,
+} from '@/ai/schemas';
 
 export async function provideIntelligentErrorCorrection(
   input: IntelligentErrorCorrectionInput
@@ -41,8 +28,12 @@ const prompt = ai.definePrompt({
   output: {schema: IntelligentErrorCorrectionOutputSchema},
   prompt: `Вы — языковой ИИ-помощник, предоставляющий обратную связь по использованию немецких слов и фраз.
 
-  Пользователь изучает слово/фразу: {{{word}}} ({{wordType}})
-  Ввод пользователя: {{{userInput}}}
+  Пользователь изучает слово/фразу: "{{word}}" ({{wordType}})
+  Ввод пользователя: "{{userInput}}"
+  
+  {{#if expectedArticle}}
+  Ожидаемый артикль: "{{expectedArticle}}"
+  {{/if}}
 
   Ваша задача — оценить ввод пользователя и предоставить полезную обратную связь.
 
@@ -50,9 +41,10 @@ const prompt = ai.definePrompt({
 
   {{#ifEquals wordType "noun"}}
   СУЩЕСТВИТЕЛЬНОЕ:
-  - Проверьте, является ли ввод пользователя правильным артиклем (der, die, das) для существительного.
-  - Если неверно, объясните правильный артикль и почему это так. По возможности дайте подсказку.
-  - isCorrect должен отражать, был ли предоставлен правильный артикль
+  - Проверьте, является ли ввод пользователя ("{{userInput}}") правильным артиклем ("{{expectedArticle}}") для существительного "{{word}}".
+  - Если неверно, объясните, почему правильный артикль — "{{expectedArticle}}". По возможности дайте мнемоническую подсказку.
+  - isCorrect должен отражать, был ли предоставлен правильный артикль.
+  - Ответ должен быть кратким и по существу.
   {{/ifEquals}}
 
   {{#ifEquals wordType "verb"}}
@@ -60,7 +52,7 @@ const prompt = ai.definePrompt({
   - Оцените, подходят ли форма и использование глагола в данном контексте.
   - Рассмотрите варианты и синонимы.
   - Предоставьте объяснение, почему ввод правильный или неправильный с точки зрения значения и грамматической правильности.
-  - isCorrect должен отражать правильность ответа с точки зрения значения и грамматической правильности.
+  - isCorrect должен отражать правильность ответа с точки зрения значения и грамmatical правильности.
   {{/ifEquals}}
 
   {{#ifEquals wordType "adjective"}}

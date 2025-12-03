@@ -1,4 +1,4 @@
-import type { WordDetailsOutput } from "@/ai/flows";
+import type { WordDetailsOutput } from "@/ai/schemas";
 
 export type WordType = 'noun' | 'verb' | 'adjective' | 'adverb' | 'preposition' | 'other';
 

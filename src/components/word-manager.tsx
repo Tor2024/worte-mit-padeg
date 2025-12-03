@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react';
 import type { Word, WordType } from '@/lib/types';
 import { LearningSession } from '@/components/learning-session';
 import { QuizSession } from '@/components/quiz-session';
+import { MultipleChoiceQuizSession } from '@/components/multiple-choice-quiz-session';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { BookMarked, Sparkles, Loader2, PlusCircle, Trash2, BookOpen, Lightbulb } from 'lucide-react';
+import { BookMarked, Sparkles, Loader2, PlusCircle, Trash2, BookOpen, Lightbulb, FileQuestion } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { fetchWordDetails } from '@/lib/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -37,7 +38,7 @@ const renderArticle = (article?: string) => {
 
 export function WordManager() {
   const [dictionary, setDictionary] = useState<Word[]>([]);
-  const [session, setSession] = useState<{type: 'learning' | 'quiz', words: Word[]} | null>(null);
+  const [session, setSession] = useState<{type: 'learning' | 'quiz' | 'multiple-choice', words: Word[]} | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [filter, setFilter] = useState<WordType | 'all'>('all');
   const { toast } = useToast();
@@ -123,6 +124,14 @@ export function WordManager() {
     }
   };
 
+  const handleStartMultipleChoiceQuiz = (words: Word[]) => {
+    if (words.length > 0) {
+      setSession({ type: 'multiple-choice', words });
+    } else {
+        toast({ title: "Нет слов для теста", description: "Добавьте слова в эту категорию, чтобы начать тест.", variant: "default" });
+    }
+  };
+
   const filteredDictionary = filter === 'all' 
     ? dictionary 
     : dictionary.filter(word => word.details.partOfSpeech === filter);
@@ -133,6 +142,10 @@ export function WordManager() {
   if (session?.type === 'quiz') {
     return <QuizSession words={session.words} onEndSession={() => setSession(null)} />;
   }
+  if (session?.type === 'multiple-choice') {
+    return <MultipleChoiceQuizSession words={session.words} onEndSession={() => setSession(null)} />;
+  }
+
 
   return (
     <div className="w-full max-w-3xl animate-in fade-in-50 space-y-8">
@@ -201,7 +214,11 @@ export function WordManager() {
                </Button>
                <Button onClick={() => handleStartQuizSession(filteredDictionary)}>
                  <Lightbulb className="mr-2 h-4 w-4" />
-                 Викторина
+                 Артикли
+               </Button>
+                <Button onClick={() => handleStartMultipleChoiceQuiz(filteredDictionary)}>
+                 <FileQuestion className="mr-2 h-4 w-4" />
+                 Тест
                </Button>
             </div>
           </div>

@@ -61,7 +61,8 @@ export function QuizSession({ words, onEndSession }: QuizSessionProps) {
       const result = await checkArticle({
           word: currentWord.text,
           userInput: selectedArticle,
-          wordType: 'noun'
+          wordType: 'noun',
+          expectedArticle: currentWord.details.nounDetails?.article
       });
 
       if (result.success) {
