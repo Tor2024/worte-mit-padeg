@@ -275,7 +275,7 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
             <p className="text-muted-foreground">Заполните пропуск и выберите правильный падеж:</p>
             <h2 className="font-serif text-2xl my-2 bg-muted p-4 rounded-md">
               {task.quiz.sentence.split('____').map((part, index, arr) => 
-                index === arr.length - 1 ? part : <>{part}<span className="font-bold text-primary">____</span></>
+                <span key={index}>{index === arr.length - 1 ? part : <>{part}<span className="font-bold text-primary">____</span></>}</span>
               )}
             </h2>
              <p className="text-sm text-muted-foreground">"{task.quiz.russianTranslation}"</p>
@@ -384,5 +384,3 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
     </Dialog>
   );
 }
-
-    
