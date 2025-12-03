@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import type { Word, WordType } from '@/lib/types';
-import { LearningView } from '@/components/learning-view';
+import { LearningSession } from '@/components/learning-session';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { BookMarked, Sparkles, Loader2, PlusCircle, Trash2, BookOpen } from 'lucide-react';
+import { BookMarked, Sparkles, Loader2, PlusCircle, Trash2, BookOpen, Play } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { fetchWordDetails } from '@/lib/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -31,16 +31,16 @@ const renderArticle = (article?: string) => {
     if (article === 'die') colorClass = 'text-chart-5';
     if (article === 'das') colorClass = 'text-chart-2';
     return <span className={`font-semibold ${colorClass}`}>{article}</span>;
-  };
+};
 
 
 export function WordManager() {
   const [dictionary, setDictionary] = useState<Word[]>([]);
-  const [currentWord, setCurrentWord] = useState<Word | null>(null);
+  const [learningSessionWords, setLearningSessionWords] = useState<Word[] | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [filter, setFilter] = useState<WordType | 'all'>('all');
   const { toast } = useToast();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useState(false);
 
   useEffect(() => {
     try {
@@ -83,17 +83,19 @@ export function WordManager() {
         return;
     }
     
-    startTransition(async () => {
-      const result = await fetchWordDetails(wordToAdd);
-      if (result.success) {
-        const newWord: Word = { text: wordToAdd, details: result.data };
-        const newDictionary = [...dictionary, newWord];
-        saveDictionary(newDictionary);
-        setInputValue('');
-        toast({ title: "Слово добавлено!", description: `"${wordToAdd}" успешно добавлен в ваш словарь.` });
-      } else {
-        toast({ title: "Ошибка ИИ", description: result.error, variant: "destructive" });
-      }
+    startTransition(true);
+    fetchWordDetails(wordToAdd).then(result => {
+        if (result.success) {
+            const newWord: Word = { text: wordToAdd, details: result.data };
+            const newDictionary = [...dictionary, newWord];
+            saveDictionary(newDictionary);
+            setInputValue('');
+            toast({ title: "Слово добавлено!", description: `"${wordToAdd}" успешно добавлен в ваш словарь.` });
+        } else {
+            toast({ title: "Ошибка ИИ", description: result.error, variant: "destructive" });
+        }
+    }).finally(() => {
+        startTransition(false);
     });
   };
 
@@ -103,16 +105,20 @@ export function WordManager() {
     toast({ title: "Слово удалено", description: `"${wordText}" удалено из вашего словаря.` });
   };
   
-  const handleReset = () => {
-    setCurrentWord(null);
+  const handleStartSession = (words: Word[]) => {
+    if (words.length > 0) {
+      setLearningSessionWords(words);
+    } else {
+        toast({ title: "Нет слов для изучения", description: "Добавьте слова в эту категорию, чтобы начать изучение.", variant: "default" });
+    }
   };
 
   const filteredDictionary = filter === 'all' 
     ? dictionary 
     : dictionary.filter(word => word.details.partOfSpeech === filter);
 
-  if (currentWord) {
-    return <LearningView word={currentWord} onReset={handleReset} />;
+  if (learningSessionWords) {
+    return <LearningSession words={learningSessionWords} onEndSession={() => setLearningSessionWords(null)} />;
   }
 
   return (
@@ -158,12 +164,12 @@ export function WordManager() {
                 Мой словарь
               </CardTitle>
               <CardDescription>
-                Здесь хранятся все ваши слова. Выберите слово, чтобы начать изучение.
+                Здесь хранятся все ваши слова. Нажмите "Начать изучение", чтобы запустить тренажер.
               </CardDescription>
             </div>
-            <div className="w-full sm:w-48">
+            <div className="w-full sm:w-auto flex items-center gap-2">
               <Select value={filter} onValueChange={(value) => setFilter(value as any)}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="Фильтр по части речи" />
                 </SelectTrigger>
                 <SelectContent>
@@ -176,6 +182,10 @@ export function WordManager() {
                   <SelectItem value="other">Другое</SelectItem>
                 </SelectContent>
               </Select>
+               <Button onClick={() => handleStartSession(filteredDictionary)}>
+                 <Play className="mr-2 h-4 w-4" />
+                 Начать изучение
+               </Button>
             </div>
           </div>
         </CardHeader>
@@ -189,7 +199,7 @@ export function WordManager() {
             <div className="space-y-2">
               {filteredDictionary.map(word => (
                 <div key={word.text} className="flex items-center justify-between rounded-lg border bg-card p-3 hover:bg-muted/50 transition-colors">
-                  <div className="flex-1 cursor-pointer" onClick={() => setCurrentWord(word)}>
+                  <div>
                     <div className="flex items-center gap-3">
                         <span className="font-bold text-lg">
                             {renderArticle(word.details.nounDetails?.article)}{' '}{word.text}
@@ -199,10 +209,6 @@ export function WordManager() {
                     <p className="text-sm text-muted-foreground">{word.details.translation}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => setCurrentWord(word)}>
-                      <BookOpen className="h-4 w-4" />
-                      <span className="sr-only">Изучать</span>
-                    </Button>
                     <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteWord(word.text)}>
                       <Trash2 className="h-4 w-4" />
                       <span className="sr-only">Удалить</span>
