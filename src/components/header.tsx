@@ -10,6 +10,9 @@ export function Header() {
             Учим немецкие слова с Олегом
           </h1>
         </div>
+        <div className="text-xs text-muted-foreground">
+          Версия 5
+        </div>
       </div>
     </header>
   );
