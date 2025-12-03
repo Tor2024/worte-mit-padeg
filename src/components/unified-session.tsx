@@ -62,7 +62,6 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
   const [inputValue, setInputValue] = useState('');
   const [answerStatus, setAnswerStatus] = useState<AnswerStatus>('unanswered');
   const [verbPracticeType, setVerbPracticeType] = useState<VerbPracticeType>('perfect');
-  const [isChecking, setIsChecking] = useState(false);
   
   const currentWord = useMemo(() => words[currentIndex], [words, currentIndex]);
 
@@ -119,7 +118,6 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     setInputValue('');
     setQuizData(null);
     setFeedback(null);
-    setIsChecking(false);
     
     const nextView = determineNextView(word);
 
@@ -185,19 +183,15 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
   
   const handleCheck = async () => {
     const isInputBased = ['verb-practice', 'recall-quiz', 'fill-in-the-blank'].includes(view);
-    if (isChecking || !currentWord || (isInputBased && !inputValue) || (!isInputBased && !selectedOption)) return;
+    if (answerStatus === 'checking' || !currentWord || (isInputBased && !inputValue) || (!isInputBased && !selectedOption)) return;
 
-    setIsChecking(true);
-    let newStatus: AnswerStatus = 'incorrect';
+    setAnswerStatus('checking');
 
     try {
-        let feedbackData: FeedbackType = null;
         if (view === 'multiple-choice') {
             const question = quizData as GenerateQuizQuestionOutput;
             const isCorrect = selectedOption === question.correctAnswer;
-            newStatus = isCorrect ? 'correct' : 'incorrect';
-            // For multiple choice, we don't need AI feedback, just show correct/incorrect
-            // We'll advance immediately in the footer button logic for this simple case.
+            setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
         } else if (view === 'article-quiz') {
             const result = await checkAnswer({
                 word: currentWord.text,
@@ -206,8 +200,8 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                 expectedAnswer: currentWord.details.nounDetails?.article
             });
             if (result.success) {
-                feedbackData = result.data;
-                newStatus = result.data.isCorrect ? 'correct' : 'incorrect';
+                setFeedback(result.data);
+                setAnswerStatus(result.data.isCorrect ? 'correct' : 'incorrect');
             } else { throw new Error(result.error); }
         } else if (view === 'verb-practice') {
             const expectedAnswer = currentWord.details.verbDetails?.perfect;
@@ -218,8 +212,8 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                 expectedAnswer: expectedAnswer,
             });
             if (result.success) {
-                feedbackData = result.data;
-                newStatus = result.data.isCorrect ? 'correct' : 'incorrect';
+                setFeedback(result.data);
+                setAnswerStatus(result.data.isCorrect ? 'correct' : 'incorrect');
             } else { throw new Error(result.error); }
         } else if (view === 'recall-quiz') {
             const result = await checkRecallAnswer({
@@ -230,8 +224,8 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                 userInput: inputValue.trim(),
             });
              if (result.success) {
-                feedbackData = result.data;
-                newStatus = result.data.isSynonym ? 'synonym' : (result.data.isCorrect ? 'correct' : 'incorrect');
+                setFeedback(result.data);
+                setAnswerStatus(result.data.isSynonym ? 'synonym' : (result.data.isCorrect ? 'correct' : 'incorrect'));
             } else { throw new Error(result.error); }
         } else if (view === 'fill-in-the-blank') {
             const blankQuiz = quizData as GenerateFillInTheBlankOutput;
@@ -243,19 +237,15 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                 sentenceContext: blankQuiz.sentenceWithBlank,
             });
             if (result.success) {
-                feedbackData = result.data;
-                newStatus = result.data.isCorrect ? 'correct' : 'incorrect';
+                setFeedback(result.data);
+                setAnswerStatus(result.data.isCorrect ? 'correct' : 'incorrect');
             } else { throw new Error(result.error); }
         }
-        
-        setFeedback(feedbackData);
-        setAnswerStatus(newStatus);
 
     } catch (error) {
         console.error("Error during check:", error);
-        // Display error to the user via toast or an alert in the dialog
-    } finally {
-        setIsChecking(false);
+        setAnswerStatus('unanswered'); // Re-enable check button on error
+        // You might want to show a toast here to inform the user
     }
 }
 
@@ -552,8 +542,8 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
             </div>
 
             {showCheckButton && (
-                <Button onClick={handleFooterButton} disabled={!canCheck || isChecking}>
-                    {isChecking ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : null}
+                <Button onClick={handleFooterButton} disabled={!canCheck || answerStatus === 'checking'}>
+                    {answerStatus === 'checking' ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : null}
                     Проверить
                 </Button>
             )}
