@@ -83,14 +83,16 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
   }, []);
 
   const updateCaseStats = (caseName: CaseName, isCorrect: boolean) => {
-    const newStats = { ...caseStats };
-    if (isCorrect) {
-      newStats[caseName].correct++;
-    } else {
-      newStats[caseName].incorrect++;
-    }
-    setCaseStats(newStats);
-    saveCaseStats(newStats);
+    setCaseStats(prevStats => {
+        const newStats = { ...prevStats };
+        if (isCorrect) {
+          newStats[caseName].correct++;
+        } else {
+          newStats[caseName].incorrect++;
+        }
+        saveCaseStats(newStats);
+        return newStats;
+    });
   };
   
   // Helper function to generate a task with adaptive difficulty
@@ -194,8 +196,10 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
   }, [dictionary, caseStats, generateAdaptiveTask]);
 
   useEffect(() => {
+    // This effect now runs only once when the component mounts
     loadNextTask();
-  }, [loadNextTask]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleClose = () => {
     setIsOpen(false);
