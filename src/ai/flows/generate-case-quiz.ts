@@ -26,7 +26,7 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert German language teacher creating a case-based quiz for a Russian-speaking student.
 
 **Task:**
-Create a grammatically and logically correct sentence using the preposition "{{preposition}}" and the noun "{{noun}}". The sentence should have a blank space where the article and any adjective endings would go.
+Create a grammatically and logically correct sentence using the preposition "{{preposition}}" and the noun "{{noun}}". The sentence should have a blank space.
 
 **CRITICAL Instructions:**
 
@@ -37,11 +37,14 @@ Create a grammatically and logically correct sentence using the preposition "{{p
     - The sentence must clearly require a specific case (Nominativ, Akkusativ, Dativ, or Genitiv).
     - For two-way prepositions (Wechselpräpositionen), decide whether the context implies direction (Akkusativ) or location (Dativ) and create the sentence accordingly.
 
-2.  **Insert a Blank:** In the sentence, replace the article/determiner part of the noun phrase with "____". For example, "Ich fahre mit ____ Auto." or "Er geht in ____ Park.".
+2.  **Insert a Blank:** In the sentence, replace ONLY the article/determiner with "____".
+    - If you decide to include an adjective, its ending should already be in the sentence. The blank is ONLY for the article.
+    - Example with adjective: "Er spielt mit ____ kleinen Haus." (The blank is for 'dem').
+    - Example without adjective: "Ich fahre mit ____ Auto." (The blank is for 'dem').
 
 3.  **Determine the Correct Case:** Identify the correct grammatical case (Nominativ, Akkusativ, Dativ, or Genitiv) that is required by the preposition in the context of your sentence.
 
-4.  **Determine the Correct Answer:** Figure out the exact word or words that should fill the blank. This is typically an article ('dem', 'den', 'der', etc.).
+4.  **Determine the Correct Answer:** Figure out the exact article ('dem', 'den', 'der', 'die', 'das', 'einen', 'einem', etc.) that should fill the blank. This is the only thing that should be in the \`correctAnswer\` field.
 
 5.  **Provide Translation:** Give a full Russian translation of the complete German sentence (with the blank filled in) to provide context.
 
@@ -68,14 +71,14 @@ Your response must be a single JSON object that adheres to the \`GenerateCaseQui
     "correctAnswer": "die"
   }
 
-**Example 3 (Dativ - Wechselpräposition):**
-- Input: { preposition: "in", noun: "Schule" }
+**Example 3 (Dativ - with Adjective):**
+- Input: { preposition: "mit", noun: "Haus" }
 - Output:
   {
-    "sentence": "Das Kind lernt in ____ Schule.",
-    "russianTranslation": "Ребенок учится в школе.",
+    "sentence": "Er spielt mit ____ kleinen Haus.",
+    "russianTranslation": "Он играет с маленьким домом.",
     "correctCase": "Dativ",
-    "correctAnswer": "der"
+    "correctAnswer": "dem"
   }
 `,
 });
@@ -88,6 +91,9 @@ const generateCaseQuizFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await prompt(input);
+    if (!output?.correctAnswer) {
+      throw new Error("AI failed to generate a valid correct answer.");
+    }
     return output!;
   }
 );
