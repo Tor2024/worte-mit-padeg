@@ -3,13 +3,26 @@
 import { getWordDetails, provideIntelligentErrorCorrection, generateQuizQuestion, practiceAdjectiveDeclension, checkRecallAnswer as checkRecallAnswerFlow, generateFillInTheBlank, generateCaseQuiz } from '@/ai/flows';
 import type { WordDetailsOutput, IntelligentErrorCorrectionInput, IntelligentErrorCorrectionOutput, GenerateQuizQuestionInput, GenerateQuizQuestionOutput, AdjectivePracticeInput, AdjectivePracticeOutput, CheckRecallInput, CheckRecallOutput, GenerateFillInTheBlankInput, GenerateFillInTheBlankOutput, GenerateCaseQuizInput, GenerateCaseQuizOutput } from '@/ai/schemas';
 
+// Helper function to handle errors more gracefully
+const handleActionError = (error: unknown, defaultMessage: string): { success: false, error: string } => {
+    console.error(error);
+    // Check for specific rate limit error message from Google AI
+    if (error instanceof Error && error.message.includes('429')) {
+        return { success: false, error: 'Слишком много запросов. Пожалуйста, подождите минуту и попробуйте снова.' };
+    }
+    // Check if error is an object with a message property
+    if (typeof error === 'object' && error !== null && 'message' in error) {
+        return { success: false, error: String(error.message) };
+    }
+    return { success: false, error: defaultMessage };
+}
+
 export async function fetchWordDetails(word: string, partOfSpeech?: any): Promise<{ success: true, data: WordDetailsOutput } | { success: false, error: string }> {
   try {
     const result = await getWordDetails({ wordOrPhrase: word, partOfSpeech: partOfSpeech });
     return { success: true, data: result };
   } catch (error) {
-    console.error(error);
-    return { success: false, error: 'Не удалось получить информацию о слове.' };
+    return handleActionError(error, 'Не удалось получить информацию о слове.');
   }
 }
 
@@ -18,8 +31,7 @@ export async function checkAnswer(input: IntelligentErrorCorrectionInput): Promi
         const result = await provideIntelligentErrorCorrection(input);
         return { success: true, data: result };
     } catch (error) {
-        console.error(error);
-        return { success: false, error: 'Не удалось проверить ответ.' };
+        return handleActionError(error, 'Не удалось проверить ответ.');
     }
 }
 
@@ -28,8 +40,7 @@ export async function fetchQuizQuestion(input: GenerateQuizQuestionInput): Promi
         const result = await generateQuizQuestion(input);
         return { success: true, data: result };
     } catch (error) {
-        console.error(error);
-        return { success: false, error: 'Не удалось сгенерировать вопрос для теста.' };
+        return handleActionError(error, 'Не удалось сгенерировать вопрос для теста.');
     }
 }
 
@@ -38,8 +49,7 @@ export async function checkAdjectiveDeclension(input: AdjectivePracticeInput): P
         const result = await practiceAdjectiveDeclension(input);
         return { success: true, data: result };
     } catch (error) {
-        console.error(error);
-        return { success: false, error: 'Не удалось проверить склонение прилагательного.' };
+        return handleActionError(error, 'Не удалось проверить склонение прилагательного.');
     }
 }
 
@@ -48,8 +58,7 @@ export async function checkRecallAnswer(input: CheckRecallInput): Promise<{ succ
         const result = await checkRecallAnswerFlow(input);
         return { success: true, data: result };
     } catch (error) {
-        console.error(error);
-        return { success: false, error: 'Не удалось проверить перевод.' };
+        return handleActionError(error, 'Не удалось проверить перевод.');
     }
 }
 
@@ -58,23 +67,18 @@ export async function fetchFillInTheBlank(input: GenerateFillInTheBlankInput): P
         const result = await generateFillInTheBlank(input);
         return { success: true, data: result };
     } catch (error) {
-        console.error(error);
-        return { success: false, error: 'Не удалось создать упражнение "Заполните пропуск".' };
+        return handleActionError(error, 'Не удалось создать упражнение "Заполните пропуск".');
     }
 }
 
-export async function fetchCaseQuiz(input: GenerateCaseQuizInput): Promise<{ success: true, data: GenerateCaseQuizOutput } | { success: false, error: 'Не удалось создать викторину по падежам.' }> {
+export async function fetchCaseQuiz(input: GenerateCaseQuizInput): Promise<{ success: true, data: GenerateCaseQuizOutput } | { success: false, error: string }> {
     try {
         const result = await generateCaseQuiz(input);
-        // Sometimes the AI might return an empty string for the answer if it gets confused.
         if (!result.correctAnswer) {
             throw new Error("AI failed to provide a correct answer for the case quiz.");
         }
         return { success: true, data: result };
     } catch (error) {
-        console.error(error);
-        return { success: false, error: 'Не удалось создать викторину по падежам.' };
+        return handleActionError(error, 'Не удалось создать викторину по падежам.');
     }
 }
-
-    

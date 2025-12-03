@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getNextReviewDate } from '@/lib/srs';
+import { useToast } from '@/hooks/use-toast';
 
 
 interface UnifiedSessionProps {
@@ -62,6 +63,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
   const [inputValue, setInputValue] = useState('');
   const [answerStatus, setAnswerStatus] = useState<AnswerStatus>('unanswered');
   const [verbPracticeType, setVerbPracticeType] = useState<VerbPracticeType>('perfect');
+  const { toast } = useToast();
   
   const currentWord = useMemo(() => words[currentIndex], [words, currentIndex]);
 
@@ -121,37 +123,44 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     
     const nextView = determineNextView(word);
 
-    if (nextView === 'flashcard') {
-      setView('flashcard');
-    } else if (nextView === 'multiple-choice') {
-      const result = await fetchQuizQuestion({ word: word.text, details: word.details });
-      if (result.success && result.data.options.length > 0) {
-        setQuizData(result.data);
-        setView('multiple-choice');
-      } else {
-        if (!result.success) console.error(result.error);
-        setView('flashcard'); // Fallback to flashcard
-      }
-    } else if (nextView === 'article-quiz') {
-      setView('article-quiz');
-    } else if (nextView === 'verb-practice') {
-      setVerbPracticeType('perfect');
-      setView('verb-practice');
-    } else if (nextView === 'recall-quiz') {
-      setView('recall-quiz');
-    } else if (nextView === 'fill-in-the-blank') {
-        // Pick a random example sentence
-        const example = word.details.examples[Math.floor(Math.random() * word.details.examples.length)];
-        const result = await fetchFillInTheBlank({ word: word.text, partOfSpeech: word.details.partOfSpeech, example });
-        if (result.success) {
-            setQuizData(result.data);
-            setView('fill-in-the-blank');
-        } else {
-            if (!result.success) console.error(result.error);
-            setView('flashcard'); // Fallback to flashcard
+    try {
+        if (nextView === 'flashcard') {
+            setView('flashcard');
+        } else if (nextView === 'multiple-choice') {
+            const result = await fetchQuizQuestion({ word: word.text, details: word.details });
+            if (result.success && result.data.options.length > 0) {
+                setQuizData(result.data);
+                setView('multiple-choice');
+            } else {
+                throw new Error(result.success === false ? result.error : "AI failed to generate options.");
+            }
+        } else if (nextView === 'article-quiz') {
+            setView('article-quiz');
+        } else if (nextView === 'verb-practice') {
+            setVerbPracticeType('perfect');
+            setView('verb-practice');
+        } else if (nextView === 'recall-quiz') {
+            setView('recall-quiz');
+        } else if (nextView === 'fill-in-the-blank') {
+            const example = word.details.examples[Math.floor(Math.random() * word.details.examples.length)];
+            const result = await fetchFillInTheBlank({ word: word.text, partOfSpeech: word.details.partOfSpeech, example });
+            if (result.success) {
+                setQuizData(result.data);
+                setView('fill-in-the-blank');
+            } else {
+                throw new Error(result.success === false ? result.error : "AI failed to generate a sentence.");
+            }
         }
+    } catch (error: any) {
+        console.error("Error loading view:", error);
+        toast({
+            title: "Ошибка загрузки задания",
+            description: error.message || "Не удалось создать упражнение. Показываю обычную карточку.",
+            variant: "destructive"
+        });
+        setView('flashcard'); // Fallback to flashcard on any error
     }
-  }, [determineNextView]);
+  }, [determineNextView, toast]);
 
   useEffect(() => {
     if (currentWord) {
@@ -187,13 +196,20 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
 
     setAnswerStatus('checking');
 
+    let result;
     try {
         if (view === 'multiple-choice') {
             const question = quizData as GenerateQuizQuestionOutput;
             const isCorrect = selectedOption === question.correctAnswer;
+            // For multiple choice, we don't need AI feedback, so we create it ourselves.
+            setFeedback({
+                isCorrect: isCorrect,
+                explanation: isCorrect ? "Все верно!" : `Правильный ответ: ${question.correctAnswer}`
+            });
             setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
+            return;
         } else if (view === 'article-quiz') {
-            const result = await checkAnswer({
+            result = await checkAnswer({
                 word: currentWord.text,
                 userInput: selectedOption!,
                 practiceType: 'article',
@@ -205,7 +221,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
             } else { throw new Error(result.error); }
         } else if (view === 'verb-practice') {
             const expectedAnswer = currentWord.details.verbDetails?.perfect;
-            const result = await checkAnswer({
+            result = await checkAnswer({
                 word: currentWord.text,
                 userInput: inputValue.trim(),
                 practiceType: verbPracticeType,
@@ -216,7 +232,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                 setAnswerStatus(result.data.isCorrect ? 'correct' : 'incorrect');
             } else { throw new Error(result.error); }
         } else if (view === 'recall-quiz') {
-            const result = await checkRecallAnswer({
+            result = await checkRecallAnswer({
                 russianWord: currentWord.details.translation,
                 germanWord: currentWord.text,
                 partOfSpeech: currentWord.details.partOfSpeech,
@@ -229,7 +245,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
             } else { throw new Error(result.error); }
         } else if (view === 'fill-in-the-blank') {
             const blankQuiz = quizData as GenerateFillInTheBlankOutput;
-            const result = await checkAnswer({
+            result = await checkAnswer({
                 word: currentWord.text,
                 userInput: inputValue.trim(),
                 practiceType: 'fill-in-the-blank',
@@ -242,10 +258,14 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
             } else { throw new Error(result.error); }
         }
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error during check:", error);
+        toast({
+            title: "Ошибка проверки",
+            description: error.message || "Не удалось проверить ответ. Возможно, вы превысили лимит запросов к AI. Попробуйте через минуту.",
+            variant: "destructive"
+        });
         setAnswerStatus('unanswered'); // Re-enable check button on error
-        // You might want to show a toast here to inform the user
     }
 }
 
@@ -475,7 +495,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                       className={`flex items-center space-x-3 rounded-md border p-4 transition-colors cursor-pointer ${answerStatus !== 'unanswered' ? 'cursor-not-allowed' : 'hover:bg-accent hover:text-accent-foreground'}
                         ${answerStatus === 'correct' && option === question.correctAnswer ? 'border-green-500 bg-green-100 dark:bg-green-900/30' : ''}
                         ${answerStatus === 'incorrect' && option === selectedOption ? 'border-destructive bg-red-100 dark:bg-red-900/30' : ''}
-                        ${answerStatus === 'incorrect' && option === question.correctAnswer ? 'border-green-500' : ''}
+                        ${answerStatus !== 'unanswered' && option === question.correctAnswer ? 'border-green-500' : ''}
                       `}
                     >
                       <RadioGroupItem value={option} id={`option-${index}`} />
@@ -496,8 +516,8 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
           handleCheck();
       } else {
           let quality: number;
-          if (view === 'multiple-choice' && selectedOption === (quizData as GenerateQuizQuestionOutput)?.correctAnswer) {
-              quality = 5;
+          if (view === 'multiple-choice') {
+              quality = selectedOption === (quizData as GenerateQuizQuestionOutput)?.correctAnswer ? 5 : 1;
           } else if (answerStatus === 'correct') {
               quality = 5;
           } else if (answerStatus === 'synonym') {
@@ -566,5 +586,3 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     </Dialog>
   );
 }
-
-    
