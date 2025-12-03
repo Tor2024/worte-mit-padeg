@@ -33,8 +33,8 @@ export const WordDetailsOutputSchema = z.object({
     .object({
       presentTense: z.string().describe('The full verb conjugation in the present tense for all persons (ich, du, er/sie/es, wir, ihr, sie/Sie), formatted for readability.'),
       perfect: z.string().describe('The perfect tense form (e.g., "ist gegangen").'),
-      prateritum: z.string().describe('The Präteritum (simple past) tense form (e.g., "ging").'),
-      futurI: z.string().describe('The Futur I (future) tense form (eg., "wird gehen").'),
+      prateritum: z.string().describe('The full verb conjugation in the Präteritum (simple past) tense for all persons, formatted for readability.'),
+      futurI: z.string().describe('The full verb conjugation in the Futur I (future) tense for all persons, formatted for readability.'),
       verbGovernment: z.string().optional().describe('The case the verb governs (e.g., "Akkusativ", "Dativ", "Genitiv") or the preposition it is used with.'),
       isReflexive: z.boolean().optional().describe('Whether the verb is reflexive (used with "sich").'),
     })

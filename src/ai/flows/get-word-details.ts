@@ -45,8 +45,8 @@ For the given German word or phrase "{{wordOrPhrase}}", provide a comprehensive 
 5.  **verbDetails**: If it's a verb:
     - **presentTense**: Provide its full present tense conjugation for all persons (ich, du, er/sie/es, wir, ihr, sie/Sie).
     - **perfect**: Provide its perfect tense form (e.g., "ist gegangen").
-    - **prateritum**: Provide its Präteritum tense form (e.g., "ging").
-    - **futurI**: Provide its Futur I tense form (e.g., "wird gehen").
+    - **prateritum**: Provide its **full** Präteritum tense conjugation for all persons.
+    - **futurI**: Provide its **full** Futur I tense conjugation for all persons.
     - **verbGovernment**: Specify the case(s) it governs (e.g., "Dativ", "Akkusativ", "Dativ + Akkusativ") or the specific preposition it's commonly used with (e.g., "warten auf + Akkusativ").
     - **isReflexive**: Set to true if it is a reflexive verb (used with "sich").
 

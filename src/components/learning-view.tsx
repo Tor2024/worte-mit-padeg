@@ -50,6 +50,16 @@ export function LearningView({ word }: LearningViewProps) {
     if (!value) return null;
     return <p><span className="font-semibold text-muted-foreground">{label}:</span> {value}</p>;
   }
+  
+  const ConjugationTable = ({ label, data }: { label: string, data?: string }) => {
+      if (!data) return null;
+      return (
+        <div>
+            <p className="font-semibold text-muted-foreground mb-1">{label}:</p>
+            <p className="whitespace-pre-wrap font-mono text-xs">{data}</p>
+        </div>
+      )
+  }
 
   return (
     <div 
@@ -79,12 +89,9 @@ export function LearningView({ word }: LearningViewProps) {
                   <>
                     <DetailItem label="Управление" value={verbDetails.verbGovernment} />
                     <DetailItem label="Perfekt" value={verbDetails.perfect} />
-                    <DetailItem label="Präteritum" value={verbDetails.prateritum} />
-                    <DetailItem label="Futur I" value={verbDetails.futurI} />
-                    <div>
-                      <p className="font-semibold text-muted-foreground mb-1">Präsens:</p>
-                      <p className="whitespace-pre-wrap font-mono text-xs">{verbDetails.presentTense}</p>
-                    </div>
+                    <ConjugationTable label="Präsens" data={verbDetails.presentTense} />
+                    <ConjugationTable label="Präteritum" data={verbDetails.prateritum} />
+                    <ConjugationTable label="Futur I" data={verbDetails.futurI} />
                   </>
                 )}
                 {partOfSpeech === 'adjective' && adjectiveDetails && (
