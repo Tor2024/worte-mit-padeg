@@ -25,6 +25,16 @@ interface UnifiedSessionProps {
 type SessionView = 'loading' | 'flashcard' | 'multiple-choice' | 'article-quiz';
 type AnswerStatus = 'unanswered' | 'correct' | 'incorrect';
 
+const formatCaseName = (caseName: string): string => {
+    switch (caseName) {
+        case 'Akkusativ': return 'Винительный падеж (Akkusativ)';
+        case 'Dativ': return 'Дательный падеж (Dativ)';
+        case 'Genitiv': return 'Родительный падеж (Genitiv)';
+        case 'Wechselpräposition': return 'Предлог двойного управления (Wechselpräposition)';
+        default: return caseName;
+    }
+};
+
 export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSessionProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isOpen, setIsOpen] = useState(true);
@@ -227,6 +237,8 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
             )
         }
         
+        const isCaseQuestion = question.questionType === 'case';
+        
         return (
              <Card className="border-none shadow-none">
               <CardContent className="p-0 flex flex-col items-center gap-6">
@@ -248,7 +260,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                       `}
                     >
                       <RadioGroupItem value={option} id={`option-${index}`} />
-                      <span className="font-medium">{option}</span>
+                      <span className="font-medium">{isCaseQuestion ? formatCaseName(option) : option}</span>
                     </Label>
                   ))}
                 </RadioGroup>
@@ -258,7 +270,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                     <X className="h-4 w-4" />
                     <AlertTitle>Неправильно</AlertTitle>
                     <AlertDescription>
-                      Правильный ответ: <strong>{question.correctAnswer}</strong>
+                      Правильный ответ: <strong>{isCaseQuestion ? formatCaseName(question.correctAnswer) : question.correctAnswer}</strong>
                     </AlertDescription>
                   </Alert>
                 )}
