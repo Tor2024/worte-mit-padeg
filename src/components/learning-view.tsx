@@ -14,7 +14,7 @@ interface LearningViewProps {
 export function LearningView({ word }: LearningViewProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const { details } = word;
-  const { partOfSpeech, nounDetails, verbDetails, prepositionDetails, conjunctionDetails, translation, examples } = details;
+  const { partOfSpeech, nounDetails, verbDetails, prepositionDetails, conjunctionDetails, adjectiveDetails, translation, examples } = details;
 
   const renderArticle = (article?: string) => {
     if (!article) return null;
@@ -46,6 +46,11 @@ export function LearningView({ word }: LearningViewProps) {
     }
   }
 
+  const DetailItem = ({ label, value }: { label: string, value?: string | React.ReactNode }) => {
+    if (!value) return null;
+    return <p><span className="font-semibold text-muted-foreground">{label}:</span> {value}</p>;
+  }
+
   return (
     <div 
         className="w-full h-full cursor-pointer perspective-1000" 
@@ -59,6 +64,7 @@ export function LearningView({ word }: LearningViewProps) {
           <div className="flex-1 flex flex-col min-h-0">
             <div className="flex justify-between items-start mb-4">
               <h2 className="font-headline text-4xl">
+                {verbDetails?.isReflexive && <span className="text-muted-foreground">sich </span>}
                 {renderArticle(nounDetails?.article)}{' '}{word.text}
               </h2>
               <Badge variant="outline">{getPartOfSpeechRussian(partOfSpeech)}</Badge>
@@ -67,24 +73,36 @@ export function LearningView({ word }: LearningViewProps) {
             <ScrollArea className="flex-1 pr-4 -mr-4">
               <div className="space-y-4 text-sm">
                 {partOfSpeech === 'noun' && nounDetails && (
-                  <>
-                    <p><span className="font-semibold text-muted-foreground">Мн. число:</span> {renderArticle('die')} {nounDetails.plural}</p>
-                  </>
+                  <DetailItem label="Мн. число" value={<>{renderArticle('die')} {nounDetails.plural}</>} />
                 )}
                 {partOfSpeech === 'verb' && verbDetails && (
                   <>
-                    <p><span className="font-semibold text-muted-foreground">Perfekt:</span> {verbDetails.perfect}</p>
+                    <DetailItem label="Управление" value={verbDetails.verbGovernment} />
+                    <DetailItem label="Perfekt" value={verbDetails.perfect} />
+                    <DetailItem label="Präteritum" value={verbDetails.prateritum} />
+                    <DetailItem label="Futur I" value={verbDetails.futurI} />
                     <div>
                       <p className="font-semibold text-muted-foreground mb-1">Präsens:</p>
                       <p className="whitespace-pre-wrap font-mono text-xs">{verbDetails.presentTense}</p>
                     </div>
                   </>
                 )}
+                {partOfSpeech === 'adjective' && adjectiveDetails && (
+                    <>
+                        <DetailItem label="Сравн. степень" value={adjectiveDetails.comparative} />
+                        <DetailItem label="Прев. степень" value={adjectiveDetails.superlative} />
+                        <DetailItem label="Антоним" value={adjectiveDetails.antonym} />
+                    </>
+                )}
                  {partOfSpeech === 'preposition' && prepositionDetails && (
-                  <p><span className="font-semibold text-muted-foreground">Падеж:</span> {prepositionDetails.case}</p>
+                  <>
+                    <DetailItem label="Падеж" value={prepositionDetails.case} />
+                    <DetailItem label="Двойное упр." value={prepositionDetails.dualCaseExplanation} />
+                    <DetailItem label="Слияния" value={prepositionDetails.commonContractions} />
+                  </>
                 )}
                 {partOfSpeech === 'conjunction' && conjunctionDetails && (
-                  <p><span className="font-semibold text-muted-foreground">Порядок слов:</span> {getVerbPositionRussian(conjunctionDetails.verbPosition)}</p>
+                  <DetailItem label="Порядок слов" value={getVerbPositionRussian(conjunctionDetails.verbPosition)} />
                 )}
               </div>
             </ScrollArea>

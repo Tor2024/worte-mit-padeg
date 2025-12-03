@@ -30,13 +30,27 @@ export const WordDetailsOutputSchema = z.object({
   verbDetails: z
     .object({
       presentTense: z.string().describe('The full verb conjugation in the present tense for all persons (ich, du, er/sie/es, wir, ihr, sie/Sie), formatted for readability.'),
-      perfect: z.string().describe('The perfect tense form (e.g., "ist gegangen").')
+      perfect: z.string().describe('The perfect tense form (e.g., "ist gegangen").'),
+      prateritum: z.string().describe('The Präteritum (simple past) tense form (e.g., "ging").'),
+      futurI: z.string().describe('The Futur I (future) tense form (e.g., "wird gehen").'),
+      verbGovernment: z.string().optional().describe('The case the verb governs (e.g., "Akkusativ", "Dativ", "Genitiv") or the preposition it is used with.'),
+      isReflexive: z.boolean().optional().describe('Whether the verb is reflexive (used with "sich").'),
     })
     .optional()
     .describe('Details specific to verbs.'),
+  adjectiveDetails: z
+    .object({
+        comparative: z.string().describe('The comparative form (e.g., "schöner").'),
+        superlative: z.string().describe('The superlative form (e.g., "am schönsten").'),
+        antonym: z.string().optional().describe('An antonym for the adjective.'),
+    })
+    .optional()
+    .describe('Details specific to adjectives.'),
   prepositionDetails: z
     .object({
         case: z.enum(['Akkusativ', 'Dativ', 'Genitiv', 'Wechselpräposition']).describe('The case the preposition is used with (e.g., Akkusativ, Dativ, Genitiv, or Wechselpräposition for two-way prepositions).'),
+        dualCaseExplanation: z.string().optional().describe('For Wechselpräpositionen, an explanation of when to use Akkusativ (wohin?) and Dativ (wo?).'),
+        commonContractions: z.string().optional().describe('Common contractions with articles (e.g., "in + dem = im", "an + das = ans").'),
     })
     .optional()
     .describe('Details specific to prepositions.'),
@@ -48,7 +62,7 @@ export const WordDetailsOutputSchema = z.object({
     .describe('Details specific to conjunctions.'),
   examples: z
     .array(ExampleSentenceSchema)
-    .describe('An array of example sentences, each with German and Russian versions.'),
+    .describe('An array of three distinct example sentences, each with German and Russian versions.'),
 });
 export type WordDetailsOutput = z.infer<typeof WordDetailsOutputSchema>;
 
