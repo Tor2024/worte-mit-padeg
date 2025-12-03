@@ -26,7 +26,7 @@ const ExampleSentenceSchema = z.object({
 const WordDetailsOutputSchema = z.object({
   translation: z.string().describe('The Russian translation of the word/phrase.'),
   partOfSpeech: z
-    .enum(['noun', 'verb', 'adjective', 'adverb', 'other'])
+    .enum(['noun', 'verb', 'adjective', 'adverb', 'preposition', 'other'])
     .describe('The determined part of speech.'),
   nounDetails: z
     .object({
@@ -44,6 +44,12 @@ const WordDetailsOutputSchema = z.object({
     })
     .optional()
     .describe('Details specific to verbs.'),
+  prepositionDetails: z
+    .object({
+        case: z.enum(['Akkusativ', 'Dativ', 'Genitiv', 'Wechselpräposition']).describe('The case the preposition is used with (e.g., Akkusativ, Dativ, Genitiv, or Wechselpräposition for two-way prepositions).'),
+    })
+    .optional()
+    .describe('Details specific to prepositions.'),
   examples: z
     .array(ExampleSentenceSchema)
     .describe('An array of example sentences, each with German and Russian versions.'),
@@ -68,7 +74,8 @@ For the given German word or phrase "{{wordOrPhrase}}", provide a comprehensive 
 2.  **partOfSpeech**: Determine the correct part of speech.
 3.  **nounDetails**: If it's a noun, provide its article ('der', 'die', or 'das') and its plural form.
 4.  **verbDetails**: If it's a verb, provide its present tense conjugation for 'ich, du, er/sie/es' and its perfect tense form.
-5.  **examples**: Provide three distinct and useful example sentences. Each example must have both the German sentence and its accurate Russian translation.
+5.  **prepositionDetails**: If it's a preposition, specify the case it governs (e.g., 'Akkusativ', 'Dativ', 'Genitiv', or 'Wechselpräposition' if it's a two-way preposition).
+6.  **examples**: Provide three distinct and useful example sentences. Each example must have both the German sentence and its accurate Russian translation.
 
 Your response must be a valid JSON object matching the output schema.
 `,

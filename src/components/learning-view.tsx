@@ -15,7 +15,7 @@ interface LearningViewProps {
 
 export function LearningView({ word, onReset }: LearningViewProps) {
   const { details } = word;
-  const { partOfSpeech, nounDetails, verbDetails, translation, examples } = details;
+  const { partOfSpeech, nounDetails, verbDetails, prepositionDetails, translation, examples } = details;
 
   const renderArticle = (article?: string) => {
     if (!article) return null;
@@ -32,6 +32,7 @@ export function LearningView({ word, onReset }: LearningViewProps) {
       case 'verb': return 'глагол';
       case 'adjective': return 'прилагательное';
       case 'adverb': return 'наречие';
+      case 'preposition': return 'предлог';
       default: return 'другое';
     }
   }
@@ -94,6 +95,12 @@ export function LearningView({ word, onReset }: LearningViewProps) {
                                     <p className="font-semibold">{verbDetails.perfect}</p>
                                 </div>
                             </>
+                        )}
+                        {partOfSpeech === 'preposition' && prepositionDetails && (
+                            <div className="flex items-center justify-between rounded-lg border bg-card p-3">
+                                <span className="text-muted-foreground">Падеж</span>
+                                <span className="font-semibold">{prepositionDetails.case}</span>
+                            </div>
                         )}
                     </CardContent>
                  </Card>
