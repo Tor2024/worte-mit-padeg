@@ -26,7 +26,7 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert German language teacher creating a case-based quiz for a Russian-speaking student.
 
 **Task:**
-Create a grammatically and logically correct sentence using the preposition "{{preposition}}" and the noun "{{noun}}". The sentence should have a blank space where an article should be.
+Create a grammatically and logically correct sentence using the preposition "{{preposition}}" and the noun "{{noun}}". The sentence should have a blank space where an article and/or adjective ending should be. The task requires the user to use a specific article type: '{{articleType}}'.
 
 **CRITICAL Instructions:**
 
@@ -37,48 +37,50 @@ Create a grammatically and logically correct sentence using the preposition "{{p
     - The sentence must clearly require a specific case (Nominativ, Akkusativ, Dativ, or Genitiv).
     - For two-way prepositions (Wechselpräpositionen), decide whether the context implies direction (Akkusativ) or location (Dativ) and create the sentence accordingly.
 
-2.  **Insert a Blank:** In the sentence, replace ONLY the article/determiner with "____".
-    - If you decide to include an adjective, its ending should already be in the sentence. The blank is ONLY for the article.
-    - Example with adjective: "Er spielt mit ____ kleinen Haus." (The blank is for 'dem').
-    - Example without adjective: "Ich fahre mit ____ Auto." (The blank is for 'dem').
+2.  **Insert a Blank:** In the sentence, replace ONLY the article/determiner and any adjective endings with "____".
+    - Example: "Er spielt mit ____ neuen Haus." (The blank is for 'dem' or 'einem', depending on the articleType).
+    - Example: "Ich fahre mit ____ Auto." (The blank is for 'dem' or 'einem').
 
 3.  **Determine the Correct Case:** Identify the correct grammatical case (Nominativ, Akkusativ, Dativ, or Genitiv) that is required by the preposition in the context of your sentence.
 
-4.  **Determine the Correct Answer:** Figure out the exact article ('dem', 'den', 'der', 'die', 'das', etc.) that should fill the blank. This is the only thing that should be in the \`correctAnswer\` field. If the blank could be filled by more than one article (e.g. 'der' or 'einer' for feminine dative), choose the definite article ('der').
+4.  **Determine the Correct Answer:** Based on the requested \`{{articleType}}\` (definite or indefinite), figure out the exact word(s) that should fill the blank. This is the only thing that should be in the \`correctAnswer\` field.
+    - If \`articleType\` is 'definite', use 'dem', 'den', 'der', 'die', 'das'.
+    - If \`articleType\` is 'indefinite', use 'einem', 'einen', 'einer', 'eine', 'ein'.
+    - If there's an adjective, the correct answer must include the article and the correctly declined adjective. E.g. "einem neuen".
 
-5.  **Provide Translation:** Give a full Russian translation of the complete German sentence (with the blank filled in) to provide context.
+5.  **Provide Translation:** Give a full Russian translation of the complete German sentence (with the blank filled in using the correct answer) to provide context.
 
 **Output Format:**
 Your response must be a single JSON object that adheres to the \`GenerateCaseQuizOutputSchema\`.
 
-**Example 1 (Dativ):**
-- Input: { preposition: "mit", noun: "Auto" }
+**Example 1 (Dativ, indefinite):**
+- Input: { preposition: "mit", noun: "Auto", articleType: "indefinite" }
 - Output:
   {
     "sentence": "Er fährt mit ____ Auto zur Arbeit.",
-    "russianTranslation": "Он едет на машине на работу.",
+    "russianTranslation": "Он едет на (какой-то) машине на работу.",
     "correctCase": "Dativ",
-    "correctAnswer": "dem"
+    "correctAnswer": "einem"
   }
 
-**Example 2 (Akkusativ - Wechselpräposition):**
-- Input: { preposition: "in", noun: "Schule" }
+**Example 2 (Akkusativ, definite):**
+- Input: { preposition: "in", noun: "Schule", articleType: "definite" }
 - Output:
   {
     "sentence": "Das Kind geht in ____ Schule.",
-    "russianTranslation": "Ребенок идет в школу.",
+    "russianTranslation": "Ребенок идет в (эту) школу.",
     "correctCase": "Akkusativ",
     "correctAnswer": "die"
   }
 
-**Example 3 (Dativ - with Adjective):**
-- Input: { preposition: "mit", noun: "Haus" }
+**Example 3 (Dativ, definite, with Adjective):**
+- Input: { preposition: "mit", noun: "Haus", articleType: "definite" }
 - Output:
   {
-    "sentence": "Er spielt mit ____ kleinen Haus.",
-    "russianTranslation": "Он играет с маленьким домом.",
+    "sentence": "Er spielt mit ____ schönen Haus.",
+    "russianTranslation": "Он играет с (этим) красивым домом.",
     "correctCase": "Dativ",
-    "correctAnswer": "dem"
+    "correctAnswer": "dem schönen"
   }
 `,
 });

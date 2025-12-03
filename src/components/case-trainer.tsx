@@ -31,6 +31,7 @@ type Task = {
   id: string;
   preposition: string;
   noun: string;
+  articleType: 'definite' | 'indefinite';
   quiz: GenerateCaseQuizOutput;
 };
 
@@ -66,7 +67,7 @@ const saveCaseStats = (stats: CaseStats) => {
 };
 
 // This function is now outside the component to prevent it from being recreated on every render.
-const generateAdaptiveTask = (dictionary: Word[], currentStats: CaseStats): { noun: string; preposition: string } | null => {
+const generateAdaptiveTaskParams = (dictionary: Word[], currentStats: CaseStats): { noun: string; preposition: string; articleType: 'definite' | 'indefinite' } | null => {
     const nouns = dictionary.filter(w => w.details.partOfSpeech === 'noun' && w.details.nounDetails);
     const prepositions = dictionary.filter(w => w.details.partOfSpeech === 'preposition' && w.details.prepositionDetails);
 
@@ -127,10 +128,12 @@ const generateAdaptiveTask = (dictionary: Word[], currentStats: CaseStats): { no
 
     const nounWord = nouns[Math.floor(Math.random() * nouns.length)];
     const prepWord = filteredPrepositions[Math.floor(Math.random() * filteredPrepositions.length)];
+    const articleType = Math.random() > 0.5 ? 'definite' : 'indefinite';
 
     return {
       noun: nounWord.text,
       preposition: prepWord.text,
+      articleType: articleType
     };
 };
 
@@ -173,7 +176,7 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
     setFeedback(null);
 
     const currentStats = getCaseStats();
-    const taskParams = generateAdaptiveTask(dictionary, currentStats);
+    const taskParams = generateAdaptiveTaskParams(dictionary, currentStats);
 
     if (!taskParams) {
       setGenerationError("Для этого упражнения вам нужны как минимум одно существительное и один предлог в словаре.");
@@ -181,12 +184,17 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
       return;
     }
 
-    const result = await fetchCaseQuiz(taskParams);
+    const result = await fetchCaseQuiz({
+        noun: taskParams.noun,
+        preposition: taskParams.preposition,
+        articleType: taskParams.articleType,
+    });
     if (result.success) {
       setTask({
         id: uuidv4(),
         noun: taskParams.noun,
         preposition: taskParams.preposition,
+        articleType: taskParams.articleType,
         quiz: result.data,
       });
     } else {
@@ -216,12 +224,13 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
     const result = await checkAnswer({
       word: task.noun,
       userInput: inputValue.trim(),
-      wordType: 'preposition',
+      wordType: 'preposition', // This tells the AI what kind of check to perform
       practiceType: 'case-quiz',
       sentenceContext: task.quiz.sentence,
       expectedAnswer: task.quiz.correctAnswer,
       correctCase: task.quiz.correctCase,
       userCaseSelection: selectedCase,
+      articleType: task.articleType,
     });
 
     if (result.success) {
@@ -288,10 +297,13 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
             <p className="text-muted-foreground">Заполните пропуск и выберите правильный падеж:</p>
             <h2 className="font-serif text-2xl my-2 bg-muted p-4 rounded-md">
               {task.quiz.sentence.split('____').map((part, index, arr) => (
-                <span key={index}>{index === arr.length - 1 ? part : <>{part}<span className="font-bold text-primary">____</span></>}</span>
+                 <span key={index}>{index === arr.length - 1 ? part : <>{part}<span className="font-bold text-primary">____</span></>}</span>
               ))}
             </h2>
              <p className="text-sm text-muted-foreground">"{task.quiz.russianTranslation}"</p>
+             <p className="font-semibold text-base mt-2">
+                Требуется: <span className="text-primary">{task.articleType === 'definite' ? 'Определенный артикль' : 'Неопределенный артикль'}</span>
+             </p>
           </div>
 
           <form
@@ -331,7 +343,7 @@ export function CaseTrainer({ dictionary, onEndSession }: CaseTrainerProps) {
                 <Input
                     value={inputValue}
                     onChange={e => setInputValue(e.target.value)}
-                    placeholder="der / dem / den..."
+                    placeholder="der / einem / den..."
                     disabled={answerStatus !== 'unanswered'}
                     className="text-center text-lg h-12"
                     autoFocus

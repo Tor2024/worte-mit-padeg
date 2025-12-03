@@ -82,6 +82,7 @@ export const IntelligentErrorCorrectionInputSchema = z.object({
   sentenceContext: z.string().optional().describe('The sentence in which the word was used, with a blank for the word. For fill-in-the-blank checks.'),
   userCaseSelection: z.string().optional().describe("The case the user selected in a case quiz."),
   correctCase: z.string().optional().describe("The correct case for a case quiz."),
+  articleType: z.enum(['definite', 'indefinite']).optional().describe('The type of article that was required for the task (definite or indefinite).'),
 });
 export type IntelligentErrorCorrectionInput = z.infer<typeof IntelligentErrorCorrectionInputSchema>;
 
@@ -168,6 +169,7 @@ export type GenerateFillInTheBlankOutput = z.infer<typeof GenerateFillInTheBlank
 export const GenerateCaseQuizInputSchema = z.object({
     noun: z.string().describe("The noun to be used in the quiz."),
     preposition: z.string().describe("The preposition to be used in the quiz."),
+    articleType: z.enum(['definite', 'indefinite']).describe('The type of article to use for the quiz question.'),
 });
 export type GenerateCaseQuizInput = z.infer<typeof GenerateCaseQuizInputSchema>;
 
