@@ -195,6 +195,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     if (answerStatus === 'checking' || !currentWord || (isInputBased && !inputValue) || (!isInputBased && !selectedOption)) return;
 
     setAnswerStatus('checking');
+    setFeedback(null);
 
     let result;
     try {
@@ -323,7 +324,9 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                        </div>
                    </RadioGroup>
 
-                   {answerStatus !== 'unanswered' && currentFeedback && (
+                   {answerStatus === 'checking' && <Loader2 className="h-8 w-8 animate-spin text-primary" />}
+
+                   {answerStatus !== 'unanswered' && answerStatus !== 'checking' && currentFeedback && (
                         <Alert variant={answerStatus === 'correct' ? 'default' : 'destructive'} className="animate-in fade-in-50 w-full">
                             {answerStatus === 'correct' ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
                             <AlertTitle>{answerStatus === 'correct' ? 'Правильно!' : 'Не совсем'}</AlertTitle>
@@ -358,7 +361,9 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                         />
                     </form>
 
-                     {answerStatus !== 'unanswered' && currentFeedback && (
+                    {answerStatus === 'checking' && <Loader2 className="h-8 w-8 animate-spin text-primary" />}
+
+                     {answerStatus !== 'unanswered' && answerStatus !== 'checking' && currentFeedback && (
                         <Alert variant={answerStatus === 'correct' ? 'default' : 'destructive'} className="animate-in fade-in-50 w-full">
                             {answerStatus === 'correct' ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
                             <AlertTitle>{answerStatus === 'correct' ? 'Правильно!' : 'Не совсем'}</AlertTitle>
@@ -394,8 +399,10 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                             autoFocus
                         />
                     </form>
+                    
+                    {answerStatus === 'checking' && <Loader2 className="h-8 w-8 animate-spin text-primary" />}
 
-                     {answerStatus !== 'unanswered' && currentFeedback && (
+                     {answerStatus !== 'unanswered' && answerStatus !== 'checking' && currentFeedback && (
                         <Alert variant={answerStatus === 'incorrect' ? 'destructive' : 'default'} className="animate-in fade-in-50 w-full">
                             {answerStatus === 'correct' ? <Check className="h-4 w-4" /> : (answerStatus === 'synonym' ? <RefreshCw className="h-4 w-4"/> : <X className="h-4 w-4" />) }
                             <AlertTitle>
@@ -451,7 +458,9 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                         />
                     </form>
 
-                     {answerStatus !== 'unanswered' && currentFeedback && (
+                    {answerStatus === 'checking' && <Loader2 className="h-8 w-8 animate-spin text-primary" />}
+
+                     {answerStatus !== 'unanswered' && answerStatus !== 'checking' && currentFeedback && (
                         <Alert variant={answerStatus === 'correct' ? 'default' : 'destructive'} className="animate-in fade-in-50 w-full">
                             {answerStatus === 'correct' ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
                             <AlertTitle>{answerStatus === 'correct' ? 'Правильно!' : 'Не совсем'}</AlertTitle>
@@ -503,6 +512,9 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
                     </Label>
                   ))}
                 </RadioGroup>
+
+                {answerStatus === 'checking' && <Loader2 className="h-8 w-8 animate-spin text-primary" />}
+
               </CardContent>
             </Card>
         )
