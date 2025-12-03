@@ -176,96 +176,111 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
   };
   
   const handleCheck = async () => {
-      const isInputBased = ['verb-practice', 'recall-quiz', 'fill-in-the-blank'].includes(view);
-      if (!currentWord || (isInputBased && !inputValue) || (!isInputBased && !selectedOption)) return;
+    const isInputBased = ['verb-practice', 'recall-quiz', 'fill-in-the-blank'].includes(view);
+    if (!currentWord || (isInputBased && !inputValue) || (!isInputBased && !selectedOption)) return;
 
-      let isCorrect = false;
-      let isSynonym = false;
+    let quality: number;
+
+    switch(view) {
+      case 'multiple-choice': {
+        const question = quizData as GenerateQuizQuestionOutput;
+        const isCorrect = selectedOption === question.correctAnswer;
+        quality = isCorrect ? 5 : 2;
+        setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
+        break;
+      }
+
+      case 'article-quiz': {
+        const result = await checkAnswer({
+            word: currentWord.text,
+            userInput: selectedOption!,
+            wordType: 'noun',
+            expectedArticle: currentWord.details.nounDetails?.article
+        });
+        if (result.success) {
+            setFeedback(result.data);
+            quality = result.data.isCorrect ? 5 : 2;
+            setAnswerStatus(result.data.isCorrect ? 'correct' : 'incorrect');
+        } else {
+            console.error(result.error);
+            quality = 1;
+            setAnswerStatus('incorrect');
+        }
+        break;
+      }
       
-      let result;
-      switch(view) {
-        case 'multiple-choice':
-          const question = quizData as GenerateQuizQuestionOutput;
-          isCorrect = selectedOption === question.correctAnswer;
-          setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
-          break;
-
-        case 'article-quiz':
-          result = await checkAnswer({
+      case 'verb-practice': {
+          const expectedAnswer = currentWord.details.verbDetails?.perfect;
+          const result = await checkAnswer({
               word: currentWord.text,
-              userInput: selectedOption!,
-              wordType: 'noun',
-              expectedArticle: currentWord.details.nounDetails?.article
+              userInput: inputValue.trim(),
+              wordType: 'verb',
+              practiceType: verbPracticeType,
+              expectedAnswer: expectedAnswer,
           });
           if (result.success) {
               setFeedback(result.data);
-              isCorrect = result.data.isCorrect;
-              setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
+              quality = result.data.isCorrect ? 5 : 2;
+              setAnswerStatus(result.data.isCorrect ? 'correct' : 'incorrect');
           } else {
-              console.error(result.error); setAnswerStatus('incorrect');
+              console.error(result.error);
+              quality = 1;
+              setAnswerStatus('incorrect');
           }
           break;
-        
-        case 'verb-practice':
-            const expectedAnswer = currentWord.details.verbDetails?.perfect;
-            result = await checkAnswer({
-                word: currentWord.text,
-                userInput: inputValue.trim(),
-                wordType: 'verb',
-                practiceType: verbPracticeType,
-                expectedAnswer: expectedAnswer,
-            });
-            if (result.success) {
-                setFeedback(result.data);
-                isCorrect = result.data.isCorrect;
-                setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
-            } else {
-                console.error(result.error); setAnswerStatus('incorrect');
-            }
-            break;
+      }
 
-        case 'recall-quiz':
-            result = await checkRecallAnswer({
-                russianWord: currentWord.details.translation,
-                germanWord: currentWord.text,
-                partOfSpeech: currentWord.details.partOfSpeech,
-                article: currentWord.details.nounDetails?.article,
-                userInput: inputValue.trim(),
-            });
-            if (result.success) {
-                setFeedback(result.data);
-                isCorrect = result.data.isCorrect;
-                isSynonym = result.data.isSynonym;
-                setAnswerStatus(isSynonym ? 'synonym' : (isCorrect ? 'correct' : 'incorrect'));
-            } else {
-                console.error(result.error); setAnswerStatus('incorrect');
-            }
-            break;
-        
-        case 'fill-in-the-blank':
-            const blankQuiz = quizData as GenerateFillInTheBlankOutput;
-            result = await checkAnswer({
-                word: currentWord.text,
-                userInput: inputValue.trim(),
-                wordType: currentWord.details.partOfSpeech,
-                practiceType: 'fill-in-the-blank',
-                expectedAnswer: blankQuiz.correctAnswer,
-                sentenceContext: blankQuiz.sentenceWithBlank,
-            });
-            if (result.success) {
-                setFeedback(result.data);
-                isCorrect = result.data.isCorrect;
-                setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
-            } else {
-                console.error(result.error); setAnswerStatus('incorrect');
-            }
-            break;
+      case 'recall-quiz': {
+          const result = await checkRecallAnswer({
+              russianWord: currentWord.details.translation,
+              germanWord: currentWord.text,
+              partOfSpeech: currentWord.details.partOfSpeech,
+              article: currentWord.details.nounDetails?.article,
+              userInput: inputValue.trim(),
+          });
+          if (result.success) {
+              setFeedback(result.data);
+              quality = result.data.isSynonym ? 4 : (result.data.isCorrect ? 5 : 2);
+              setAnswerStatus(result.data.isSynonym ? 'synonym' : (result.data.isCorrect ? 'correct' : 'incorrect'));
+          } else {
+              console.error(result.error);
+              quality = 1;
+              setAnswerStatus('incorrect');
+          }
+          break;
       }
       
-      const quality = isSynonym ? 4 : (isCorrect ? 5 : 2); // 5 for correct, 4 for synonym, 2 for incorrect
-      const newSrsData = getNextReviewDate(currentWord, quality);
-      onWordUpdate({ ...currentWord, ...newSrsData });
-  }
+      case 'fill-in-the-blank': {
+          const blankQuiz = quizData as GenerateFillInTheBlankOutput;
+          const result = await checkAnswer({
+              word: currentWord.text,
+              userInput: inputValue.trim(),
+              wordType: currentWord.details.partOfSpeech,
+              practiceType: 'fill-in-the-blank',
+              expectedAnswer: blankQuiz.correctAnswer,
+              sentenceContext: blankQuiz.sentenceWithBlank,
+          });
+          if (result.success) {
+              setFeedback(result.data);
+              quality = result.data.isCorrect ? 5 : 2;
+              setAnswerStatus(result.data.isCorrect ? 'correct' : 'incorrect');
+          } else {
+              console.error(result.error);
+              quality = 1;
+              setAnswerStatus('incorrect');
+          }
+          break;
+      }
+
+      default:
+        quality = 3; // Should not happen for quizzes
+        break;
+    }
+    
+    const newSrsData = getNextReviewDate(currentWord, quality);
+    onWordUpdate({ ...currentWord, ...newSrsData });
+}
+
 
   const progress = ((currentIndex + 1) / words.length) * 100;
   
