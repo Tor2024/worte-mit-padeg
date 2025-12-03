@@ -4,10 +4,11 @@ import {
   generateUsageExamples,
   provideIntelligentErrorCorrection,
   generateNewSentences,
+  determinePartOfSpeech,
 } from '@/ai/flows';
 
 import type { Word } from './types';
-import type { IntelligentErrorCorrectionOutput, GenerateNewSentencesOutput } from '@/ai/flows';
+import type { IntelligentErrorCorrectionOutput, GenerateNewSentencesOutput, DeterminePartOfSpeechOutput } from '@/ai/flows';
 
 export async function getUsageExamples(word: string): Promise<{ success: true, data: string[] } | { success: false, error: string }> {
   try {
@@ -44,5 +45,15 @@ export async function getAiPractice(word: string): Promise<{ success: true, data
   } catch (error) {
     console.error(error);
     return { success: false, error: 'Не удалось сгенерировать практическое задание.' };
+  }
+}
+
+export async function getPartOfSpeech(word: string): Promise<{ success: true, data: DeterminePartOfSpeechOutput } | { success: false, error: string }> {
+  try {
+    const result = await determinePartOfSpeech({ wordOrPhrase: word });
+    return { success: true, data: result };
+  } catch (error) {
+    console.error(error);
+    return { success: false, error: 'Не удалось определить часть речи.' };
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useTransition, useEffect, useCallback } from 'react';
 import type { Word, WordType } from '@/lib/types';
 import { LearningView } from '@/components/learning-view';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,8 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BookMarked, Sparkles } from 'lucide-react';
+import { BookMarked, Sparkles, Wand2, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { getPartOfSpeech } from '@/lib/actions';
 
 export function WordManager() {
   const [currentWord, setCurrentWord] = useState<Word | null>(null);
@@ -19,21 +20,9 @@ export function WordManager() {
   const [article, setArticle] = useState<'der' | 'die' | 'das' | null>(null);
   const [showArticle, setShowArticle] = useState(false);
   const { toast } = useToast();
+  const [isAiPending, startAiTransition] = useTransition();
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setInputValue(value);
-    // Automatically suggest 'noun' if the word starts with a capital letter
-    if (value.length > 0 && value.charAt(0) === value.charAt(0).toUpperCase() && value.split(" ").length === 1) {
-      if (wordType !== 'noun') {
-         setWordType('noun');
-         setShowArticle(true);
-      }
-    }
-  };
-  
-  const handleWordTypeChange = (value: string) => {
-    const newType = value as WordType;
+  const handleWordTypeChange = useCallback((newType: WordType) => {
     setWordType(newType);
     if (newType === 'noun') {
       setShowArticle(true);
@@ -41,6 +30,33 @@ export function WordManager() {
       setShowArticle(false);
       setArticle(null);
     }
+  }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInputValue(value);
+    // Automatically suggest 'noun' if the word starts with a capital letter
+    if (value.length > 0 && value.charAt(0) === value.charAt(0).toUpperCase() && value.split(" ").length === 1) {
+      if (wordType !== 'noun') {
+         handleWordTypeChange('noun');
+      }
+    }
+  };
+  
+  const handleAutoDetect = () => {
+    if (!inputValue.trim()) return;
+    startAiTransition(async () => {
+      const result = await getPartOfSpeech(inputValue.trim());
+      if (result.success) {
+        handleWordTypeChange(result.data.partOfSpeech);
+      } else {
+        toast({
+          title: "Ошибка",
+          description: result.error,
+          variant: "destructive",
+        });
+      }
+    });
   };
 
   const handleStartLearning = () => {
@@ -89,17 +105,27 @@ export function WordManager() {
                 <form onSubmit={(e) => { e.preventDefault(); handleStartLearning(); }} className="space-y-6">
                     <div className="space-y-2">
                         <Label htmlFor="word-input">Слово / Фраза</Label>
-                        <Input 
-                            id="word-input" 
-                            placeholder="например, Haus, gehen, schön" 
-                            value={inputValue}
-                            onChange={handleInputChange}
-                        />
+                        <div className="flex gap-2">
+                            <Input 
+                                id="word-input" 
+                                placeholder="например, Haus, gehen, schön" 
+                                value={inputValue}
+                                onChange={handleInputChange}
+                            />
+                            <Button type="button" variant="outline" onClick={handleAutoDetect} disabled={!inputValue.trim() || isAiPending}>
+                                {isAiPending ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Wand2 className="h-4 w-4" />
+                                )}
+                                <span className="sr-only">Определить часть речи</span>
+                            </Button>
+                        </div>
                     </div>
                     
                     <div className="space-y-2">
                         <Label>Часть речи</Label>
-                        <Select onValueChange={handleWordTypeChange} value={wordType}>
+                        <Select onValueChange={(value) => handleWordTypeChange(value as WordType)} value={wordType}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Выберите часть речи" />
                             </SelectTrigger>
