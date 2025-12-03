@@ -8,7 +8,7 @@ import { ArrowLeft, ArrowRight, Loader2, Check, X } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { LearningView } from '@/components/learning-view';
 import { fetchQuizQuestion, checkArticle } from '@/lib/actions';
-import type { GenerateQuizQuestionOutput, IntelligentErrorCorrectionOutput } from '@/ai/flows';
+import type { GenerateQuizQuestionOutput, IntelligentErrorCorrectionOutput } from '@/ai/schemas';
 import { Skeleton } from './ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -42,9 +42,12 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     if (word.repetitions === 0) {
       return 'flashcard';
     }
-    // It's a noun and we haven't mastered it yet
+    // It's a noun and we haven't mastered it yet (easeFactor is a proxy for mastery)
     if (word.details.partOfSpeech === 'noun' && word.easeFactor < 2.5) {
-      return 'article-quiz';
+      // 50% chance to get an article quiz to add variety
+      if (Math.random() > 0.5) {
+        return 'article-quiz';
+      }
     }
     // Default to a multiple choice question for variety
     return 'multiple-choice';
@@ -122,7 +125,8 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
               setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
           } else {
               console.error(result.error);
-              // Handle error?
+              // Handle error? For now, just mark as incorrect.
+              setAnswerStatus('incorrect');
           }
       }
       
@@ -134,7 +138,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
   const progress = ((currentIndex + 1) / words.length) * 100;
   
   const renderContent = () => {
-    if (view === 'loading') {
+    if (view === 'loading' || !currentWord) {
       return (
           <div className="space-y-6 flex flex-col items-center justify-center h-full">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -213,7 +217,14 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     
     if (view === 'multiple-choice') {
         const question = quizData as GenerateQuizQuestionOutput;
-        if (!question) return renderContent(); // fallback to loading
+        if (!question) {
+            return (
+                <div className="space-y-6 flex flex-col items-center justify-center h-full">
+                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                    <p className="text-muted-foreground">Создаем вопрос...</p>
+                </div>
+            )
+        }
         
         return (
              <Card className="border-none shadow-none">
@@ -268,7 +279,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
   }
 
   const isQuiz = view === 'multiple-choice' || view === 'article-quiz';
-  const showNextButton = view === 'flashcard' || (isQuiz && answerStatus !== 'unanswered');
+  const showNextButton = !isQuiz || (isQuiz && answerStatus !== 'unanswered');
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -284,36 +295,34 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
           {renderContent()}
         </div>
 
-        {view !== 'flashcard' && (
-            <DialogFooter className="p-6 bg-muted/50 border-t flex-col sm:flex-col sm:space-x-0 items-center gap-4">
-            <Progress value={progress} className="w-full h-2" />
-            <div className="flex justify-between items-center w-full">
-                <Button variant="outline" onClick={handlePrev} disabled={currentIndex === 0}>
-                    <ArrowLeft className="h-4 w-4 mr-2"/>
-                    Назад
-                </Button>
-                <div className="text-sm font-medium text-muted-foreground">
-                    {currentIndex + 1} / {words.length}
-                </div>
-
-                {!showNextButton && (
-                    <Button onClick={handleCheck} disabled={!selectedOption}>
-                        Проверить
-                    </Button>
-                )}
-
-                {showNextButton && (
-                    <Button onClick={handleNext}>
-                        {currentIndex === words.length - 1 ? 'Завершить' : 'Далее'}
-                        <ArrowRight className="h-4 w-4 ml-2"/>
-                    </Button>
-                )}
+        
+        <DialogFooter className="p-6 bg-muted/50 border-t flex-col sm:flex-col sm:space-x-0 items-center gap-4">
+        <Progress value={progress} className="w-full h-2" />
+        <div className="flex justify-between items-center w-full">
+            <Button variant="outline" onClick={handlePrev} disabled={currentIndex === 0}>
+                <ArrowLeft className="h-4 w-4 mr-2"/>
+                Назад
+            </Button>
+            <div className="text-sm font-medium text-muted-foreground">
+                {currentIndex + 1} / {words.length}
             </div>
-            </DialogFooter>
-        )}
+
+            {!showNextButton && (
+                <Button onClick={handleCheck} disabled={!selectedOption}>
+                    Проверить
+                </Button>
+            )}
+
+            {showNextButton && (
+                <Button onClick={handleNext}>
+                    {currentIndex === words.length - 1 ? 'Завершить' : 'Далее'}
+                    <ArrowRight className="h-4 w-4 ml-2"/>
+                </Button>
+            )}
+        </div>
+        </DialogFooter>
+        
       </DialogContent>
     </Dialog>
   );
 }
-
-    
