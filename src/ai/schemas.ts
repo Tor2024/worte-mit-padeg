@@ -5,6 +5,7 @@ export const WordDetailsInputSchema = z.object({
   wordOrPhrase: z
     .string()
     .describe('The German word or phrase to get details for.'),
+  partOfSpeech: z.enum(['noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'other']).optional().describe('An optional hint for the part of speech to resolve ambiguity.'),
 });
 export type WordDetailsInput = z.infer<typeof WordDetailsInputSchema>;
 
@@ -14,7 +15,8 @@ const ExampleSentenceSchema = z.object({
 });
 
 export const WordDetailsOutputSchema = z.object({
-  translation: z.string().describe('The Russian translation of the word/phrase.'),
+  translation: z.string().describe('The primary Russian translation of the word/phrase.'),
+  alternativeTranslations: z.array(z.string()).optional().describe('A list of alternative Russian translations, if they exist.'),
   partOfSpeech: z
     .enum(['noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'other'])
     .describe('The determined part of speech.'),
@@ -32,7 +34,7 @@ export const WordDetailsOutputSchema = z.object({
       presentTense: z.string().describe('The full verb conjugation in the present tense for all persons (ich, du, er/sie/es, wir, ihr, sie/Sie), formatted for readability.'),
       perfect: z.string().describe('The perfect tense form (e.g., "ist gegangen").'),
       prateritum: z.string().describe('The Präteritum (simple past) tense form (e.g., "ging").'),
-      futurI: z.string().describe('The Futur I (future) tense form (e.g., "wird gehen").'),
+      futurI: z.string().describe('The Futur I (future) tense form (eg., "wird gehen").'),
       verbGovernment: z.string().optional().describe('The case the verb governs (e.g., "Akkusativ", "Dativ", "Genitiv") or the preposition it is used with.'),
       isReflexive: z.boolean().optional().describe('Whether the verb is reflexive (used with "sich").'),
     })
@@ -123,3 +125,22 @@ export const AdjectivePracticeOutputSchema = z.object({
   })).describe('At least two example sentences demonstrating the correct usage in the target case.'),
 });
 export type AdjectivePracticeOutput = z.infer<typeof AdjectivePracticeOutputSchema>;
+
+
+// Schema for check-recall-answer flow
+export const CheckRecallInputSchema = z.object({
+  russianWord: z.string().describe('The Russian word that was prompted.'),
+  germanWord: z.string().describe('The expected German word.'),
+  partOfSpeech: z.enum(['noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'other']).describe('The part of speech of the German word.'),
+  article: z.string().optional().describe('The article of the German noun, if applicable.'),
+  userInput: z.string().describe('The user\'s answer.'),
+});
+export type CheckRecallInput = z.infer<typeof CheckRecallInputSchema>;
+
+export const CheckRecallOutputSchema = z.object({
+  isCorrect: z.boolean().describe('Whether the user\'s answer is considered correct. This includes synonyms.'),
+  isSynonym: z.boolean().describe('True if the user provided a valid synonym, but not the exact expected answer.'),
+  correctAnswer: z.string().describe('The exact expected answer, including the article for nouns.'),
+  explanation: z.string().describe('A clear explanation of why the answer is correct, incorrect, or a synonym.'),
+});
+export type CheckRecallOutput = z.infer<typeof CheckRecallOutputSchema>;

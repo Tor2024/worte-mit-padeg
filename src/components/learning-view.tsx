@@ -14,7 +14,7 @@ interface LearningViewProps {
 export function LearningView({ word }: LearningViewProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const { details } = word;
-  const { partOfSpeech, nounDetails, verbDetails, prepositionDetails, conjunctionDetails, adjectiveDetails, translation, examples } = details;
+  const { partOfSpeech, nounDetails, verbDetails, prepositionDetails, conjunctionDetails, adjectiveDetails, translation, alternativeTranslations, examples } = details;
 
   const renderArticle = (article?: string) => {
     if (!article) return null;
@@ -97,8 +97,8 @@ export function LearningView({ word }: LearningViewProps) {
                  {partOfSpeech === 'preposition' && prepositionDetails && (
                   <>
                     <DetailItem label="Падеж" value={prepositionDetails.case} />
-                    <DetailItem label="Двойное упр." value={prepositionDetails.dualCaseExplanation} />
-                    <DetailItem label="Слияния" value={prepositionDetails.commonContractions} />
+                    {prepositionDetails.dualCaseExplanation && <DetailItem label="Двойное упр." value={prepositionDetails.dualCaseExplanation} />}
+                    {prepositionDetails.commonContractions && <DetailItem label="Слияния" value={prepositionDetails.commonContractions} />}
                   </>
                 )}
                 {partOfSpeech === 'conjunction' && conjunctionDetails && (
@@ -117,6 +117,14 @@ export function LearningView({ word }: LearningViewProps) {
         <div className="absolute w-full h-full backface-hidden rotate-y-180 flex flex-col p-6 bg-secondary">
           <div className="flex-1 flex flex-col min-h-0">
               <h2 className="font-headline text-3xl mb-3 text-secondary-foreground">{translation}</h2>
+              
+              {alternativeTranslations && alternativeTranslations.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-sm font-semibold text-muted-foreground">Другие значения:</p>
+                  <p className="text-sm text-secondary-foreground">{alternativeTranslations.join(', ')}</p>
+                </div>
+              )}
+
               <div className="flex-1 space-y-2 min-h-0">
                   <h3 className="font-semibold text-secondary-foreground">Примеры:</h3>
                    <ScrollArea className="h-full pr-4 -mr-4">

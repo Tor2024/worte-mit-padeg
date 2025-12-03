@@ -46,6 +46,7 @@ export function WordManager() {
   const { toast } = useToast();
   const [isPending, startTransition] = useState(false);
   const [earlySessionDialogOpen, setEarlySessionDialogOpen] = useState(false);
+  const [wordTypeHint, setWordTypeHint] = useState<WordType | undefined>(undefined);
 
   useEffect(() => {
     try {
@@ -78,7 +79,7 @@ export function WordManager() {
   };
 
   const handleAddWord = () => {
-    const wordToAdd = inputValue.trim();
+    let wordToAdd = inputValue.trim();
     if (!wordToAdd) {
       toast({ title: "Пустой ввод", description: "Пожалуйста, введите слово для добавления.", variant: "destructive" });
       return;
@@ -89,8 +90,15 @@ export function WordManager() {
     }
     
     startTransition(true);
-    fetchWordDetails(wordToAdd).then(result => {
+    fetchWordDetails(wordToAdd, wordTypeHint).then(result => {
         if (result.success) {
+            // Apply automatic capitalization based on fetched part of speech
+            if (result.data.partOfSpeech === 'noun') {
+                wordToAdd = wordToAdd.charAt(0).toUpperCase() + wordToAdd.slice(1);
+            } else {
+                wordToAdd = wordToAdd.toLowerCase();
+            }
+
             const newWord: Word = { 
               text: wordToAdd, 
               details: result.data,
@@ -104,6 +112,7 @@ export function WordManager() {
             const newDictionary = [newWord, ...dictionary];
             saveDictionary(newDictionary);
             setInputValue('');
+            setWordTypeHint(undefined);
             toast({ title: "Слово добавлено!", description: `"${wordToAdd}" успешно добавлен в ваш словарь.` });
         } else {
             toast({ title: "Ошибка ИИ", description: result.error, variant: "destructive" });
@@ -188,7 +197,7 @@ export function WordManager() {
                   Добавить новое слово
               </CardTitle>
               <CardDescription>
-                  Введите немецкое слово или фразу, чтобы добавить его в свой словарь для изучения.
+                  Введите немецкое слово или фразу. Для омонимов (как 'See') можно указать часть речи.
               </CardDescription>
           </CardHeader>
           <CardContent>
@@ -202,6 +211,21 @@ export function WordManager() {
                           onChange={(e) => setInputValue(e.target.value)}
                       />
                   </div>
+                   <div className="space-y-2">
+                      <Label htmlFor="word-type-hint">Часть речи (опц.)</Label>
+                       <Select value={wordTypeHint} onValueChange={(value) => setWordTypeHint(value as any)}>
+                          <SelectTrigger id="word-type-hint" className="w-[180px]">
+                            <SelectValue placeholder="Уточнить" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="noun">Существительное</SelectItem>
+                            <SelectItem value="verb">Глагол</SelectItem>
+                            <SelectItem value="adjective">Прилагательное</SelectItem>
+                            <SelectItem value="preposition">Предлог</SelectItem>
+                             <SelectItem value="conjunction">Союз</SelectItem>
+                          </SelectContent>
+                        </Select>
+                   </div>
                   <Button 
                       type="submit" 
                       disabled={!inputValue.trim() || isPending}

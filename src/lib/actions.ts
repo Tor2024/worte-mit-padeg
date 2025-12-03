@@ -1,11 +1,11 @@
 'use server';
 
-import { getWordDetails, provideIntelligentErrorCorrection, generateQuizQuestion, practiceAdjectiveDeclension } from '@/ai/flows';
-import type { WordDetailsOutput, IntelligentErrorCorrectionInput, IntelligentErrorCorrectionOutput, GenerateQuizQuestionInput, GenerateQuizQuestionOutput, AdjectivePracticeInput, AdjectivePracticeOutput } from '@/ai/schemas';
+import { getWordDetails, provideIntelligentErrorCorrection, generateQuizQuestion, practiceAdjectiveDeclension, checkRecallAnswer as checkRecallAnswerFlow } from '@/ai/flows';
+import type { WordDetailsOutput, IntelligentErrorCorrectionInput, IntelligentErrorCorrectionOutput, GenerateQuizQuestionInput, GenerateQuizQuestionOutput, AdjectivePracticeInput, AdjectivePracticeOutput, CheckRecallInput, CheckRecallOutput } from '@/ai/schemas';
 
-export async function fetchWordDetails(word: string): Promise<{ success: true, data: WordDetailsOutput } | { success: false, error: string }> {
+export async function fetchWordDetails(word: string, partOfSpeech?: any): Promise<{ success: true, data: WordDetailsOutput } | { success: false, error: string }> {
   try {
-    const result = await getWordDetails({ wordOrPhrase: word });
+    const result = await getWordDetails({ wordOrPhrase: word, partOfSpeech: partOfSpeech });
     return { success: true, data: result };
   } catch (error) {
     console.error(error);
@@ -40,5 +40,15 @@ export async function checkAdjectiveDeclension(input: AdjectivePracticeInput): P
     } catch (error) {
         console.error(error);
         return { success: false, error: 'Не удалось проверить склонение прилагательного.' };
+    }
+}
+
+export async function checkRecallAnswer(input: CheckRecallInput): Promise<{ success: true, data: CheckRecallOutput } | { success: false, error: string }> {
+    try {
+        const result = await checkRecallAnswerFlow(input);
+        return { success: true, data: result };
+    } catch (error) {
+        console.error(error);
+        return { success: false, error: 'Не удалось проверить перевод.' };
     }
 }
