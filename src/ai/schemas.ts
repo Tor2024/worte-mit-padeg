@@ -16,7 +16,7 @@ const ExampleSentenceSchema = z.object({
 export const WordDetailsOutputSchema = z.object({
   translation: z.string().describe('The Russian translation of the word/phrase.'),
   partOfSpeech: z
-    .enum(['noun', 'verb', 'adjective', 'adverb', 'preposition', 'other'])
+    .enum(['noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'other'])
     .describe('The determined part of speech.'),
   nounDetails: z
     .object({
@@ -40,6 +40,12 @@ export const WordDetailsOutputSchema = z.object({
     })
     .optional()
     .describe('Details specific to prepositions.'),
+  conjunctionDetails: z
+    .object({
+        verbPosition: z.enum(['secondPosition', 'endOfSentence']).describe('The position of the verb in a clause introduced by this conjunction (e.g., "secondPosition" for coordinating conjunctions like "und", "endOfSentence" for subordinating conjunctions like "weil").'),
+    })
+    .optional()
+    .describe('Details specific to conjunctions.'),
   examples: z
     .array(ExampleSentenceSchema)
     .describe('An array of example sentences, each with German and Russian versions.'),
@@ -51,7 +57,7 @@ export type WordDetailsOutput = z.infer<typeof WordDetailsOutputSchema>;
 export const IntelligentErrorCorrectionInputSchema = z.object({
   word: z.string().describe('The word or phrase entered by the user.'),
   userInput: z.string().describe('The user input that needs to be checked.'),
-  wordType: z.enum(['noun', 'verb', 'adjective', 'adverb', 'preposition', 'other']).describe('The type of the word.'),
+  wordType: z.enum(['noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'other']).describe('The type of the word.'),
   expectedArticle: z.string().optional().describe('The expected article for nouns (der, die, das). Only applicable if wordType is noun.'),
   knownSynonyms: z.array(z.string()).optional().describe('Known synonyms for the word, if any.'),
 });

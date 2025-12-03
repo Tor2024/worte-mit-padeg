@@ -15,7 +15,7 @@ interface LearningViewProps {
 export function LearningView({ word }: LearningViewProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const { details } = word;
-  const { partOfSpeech, nounDetails, verbDetails, prepositionDetails, translation, examples } = details;
+  const { partOfSpeech, nounDetails, verbDetails, prepositionDetails, conjunctionDetails, translation, examples } = details;
 
   const renderArticle = (article?: string) => {
     if (!article) return null;
@@ -33,9 +33,19 @@ export function LearningView({ word }: LearningViewProps) {
       case 'adjective': return 'прилагательное';
       case 'adverb': return 'наречие';
       case 'preposition': return 'предлог';
+      case 'conjunction': return 'союз';
       default: return 'другое';
     }
   };
+
+  const getVerbPositionRussian = (pos?: 'secondPosition' | 'endOfSentence') => {
+    if (!pos) return null;
+    switch (pos) {
+        case 'secondPosition': return 'глагол на 2-м месте';
+        case 'endOfSentence': return 'глагол в конце';
+        default: return null;
+    }
+  }
 
   return (
     <div 
@@ -72,6 +82,9 @@ export function LearningView({ word }: LearningViewProps) {
               )}
                {partOfSpeech === 'preposition' && prepositionDetails && (
                 <p><span className="font-semibold text-muted-foreground">Падеж:</span> {prepositionDetails.case}</p>
+              )}
+              {partOfSpeech === 'conjunction' && conjunctionDetails && (
+                <p><span className="font-semibold text-muted-foreground">Порядок слов:</span> {getVerbPositionRussian(conjunctionDetails.verbPosition)}</p>
               )}
             </div>
           </div>

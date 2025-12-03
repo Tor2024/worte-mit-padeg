@@ -35,7 +35,8 @@ For the given German word or phrase "{{wordOrPhrase}}", provide a comprehensive 
 3.  **nounDetails**: If it's a noun, provide its article ('der', 'die', or 'das') and its plural form.
 4.  **verbDetails**: If it's a verb, provide its full present tense conjugation for all persons (ich, du, er/sie/es, wir, ihr, sie/Sie) and its perfect tense form. Format the present tense conjugation clearly, with each person on a new line.
 5.  **prepositionDetails**: If it's a preposition, specify the case it governs (e.g., 'Akkusativ', 'Dativ', 'Genitiv', or 'Wechselpräposition' if it's a two-way preposition).
-6.  **examples**: Provide three distinct and useful example sentences. Each example must have both the German sentence and its accurate Russian translation.
+6.  **conjunctionDetails**: If it's a conjunction, specify the verb position it leads to. Use 'secondPosition' for coordinating conjunctions (e.g., und, aber, denn) and 'endOfSentence' for subordinating conjunctions (e.g., weil, dass, obwohl).
+7.  **examples**: Provide three distinct and useful example sentences. Each example must have both the German sentence and its accurate Russian translation.
 
 Your response must be a valid JSON object matching the output schema.
 `,

@@ -22,6 +22,7 @@ const getPartOfSpeechRussian = (pos: WordType) => {
       case 'adjective': return 'прилагательное';
       case 'adverb': return 'наречие';
       case 'preposition': return 'предлог';
+      case 'conjunction': return 'союз';
       default: return 'другое';
     }
 }
@@ -205,6 +206,7 @@ export function WordManager() {
                   <SelectItem value="adjective">Прилагательные</SelectItem>
                   <SelectItem value="adverb">Наречия</SelectItem>
                   <SelectItem value="preposition">Предлоги</SelectItem>
+                  <SelectItem value="conjunction">Союзы</SelectItem>
                   <SelectItem value="other">Другое</SelectItem>
                 </SelectContent>
               </Select>
