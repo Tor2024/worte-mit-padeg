@@ -101,3 +101,25 @@ export const GenerateQuizQuestionOutputSchema = z.object({
   correctAnswer: z.string().describe('The correct answer from the options list.'),
 });
 export type GenerateQuizQuestionOutput = z.infer<typeof GenerateQuizQuestionOutputSchema>;
+
+// Schema for practice-adjective-declension flow
+export const AdjectivePracticeInputSchema = z.object({
+  adjective: z.string().describe('The adjective in its base form (e.g., "schön").'),
+  noun: z.string().describe('The noun (e.g., "Haus").'),
+  nounArticle: z.enum(['der', 'die', 'das']).describe('The article of the noun.'),
+  targetCase: z.enum(['Nominativ', 'Akkusativ', 'Dativ', 'Genitiv']).describe('The target case for declension.'),
+  articleType: z.enum(['definite', 'indefinite']).describe('The type of article to use (definite "der/die/das" or indefinite "ein/eine").'),
+  userInput: z.string().describe('The user\'s attempt to decline the adjective and noun phrase.'),
+});
+export type AdjectivePracticeInput = z.infer<typeof AdjectivePracticeInputSchema>;
+
+export const AdjectivePracticeOutputSchema = z.object({
+  isCorrect: z.boolean().describe('Whether the user\'s input is correct.'),
+  correctAnswer: z.string().describe('The fully correct phrase.'),
+  explanation: z.string().describe('A detailed explanation of the declension rule, why the user\'s answer was right or wrong, and what the correct form is.'),
+  examples: z.array(z.object({
+    sentence: z.string().describe('An example sentence using the declined phrase.'),
+    translation: z.string().describe('The Russian translation of the sentence.'),
+  })).describe('At least two example sentences demonstrating the correct usage in the target case.'),
+});
+export type AdjectivePracticeOutput = z.infer<typeof AdjectivePracticeOutputSchema>;

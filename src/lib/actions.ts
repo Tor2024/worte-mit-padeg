@@ -1,7 +1,7 @@
 'use server';
 
-import { getWordDetails, provideIntelligentErrorCorrection, generateQuizQuestion } from '@/ai/flows';
-import type { WordDetailsOutput, IntelligentErrorCorrectionInput, IntelligentErrorCorrectionOutput, GenerateQuizQuestionInput, GenerateQuizQuestionOutput } from '@/ai/schemas';
+import { getWordDetails, provideIntelligentErrorCorrection, generateQuizQuestion, practiceAdjectiveDeclension } from '@/ai/flows';
+import type { WordDetailsOutput, IntelligentErrorCorrectionInput, IntelligentErrorCorrectionOutput, GenerateQuizQuestionInput, GenerateQuizQuestionOutput, AdjectivePracticeInput, AdjectivePracticeOutput } from '@/ai/schemas';
 
 export async function fetchWordDetails(word: string): Promise<{ success: true, data: WordDetailsOutput } | { success: false, error: string }> {
   try {
@@ -30,5 +30,15 @@ export async function fetchQuizQuestion(input: GenerateQuizQuestionInput): Promi
     } catch (error) {
         console.error(error);
         return { success: false, error: 'Не удалось сгенерировать вопрос для теста.' };
+    }
+}
+
+export async function checkAdjectiveDeclension(input: AdjectivePracticeInput): Promise<{ success: true, data: AdjectivePracticeOutput } | { success: false, error: string }> {
+    try {
+        const result = await practiceAdjectiveDeclension(input);
+        return { success: true, data: result };
+    } catch (error) {
+        console.error(error);
+        return { success: false, error: 'Не удалось проверить склонение прилагательного.' };
     }
 }
