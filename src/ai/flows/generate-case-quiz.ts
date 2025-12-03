@@ -26,14 +26,14 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert German language teacher creating a case-based quiz for a Russian-speaking student.
 
 **Task:**
-Create a grammatically and logically correct sentence using the preposition "{{preposition}}" and the noun "{{noun}}". The sentence should have a blank space.
+Create a grammatically and logically correct sentence using the preposition "{{preposition}}" and the noun "{{noun}}". The sentence should have a blank space where an article should be.
 
 **CRITICAL Instructions:**
 
-1.  **Create a Contextual and CORRECT Sentence:**
-    - Form a simple, natural-sounding, and **absolutely correct** German sentence.
-    - The verb and context you create **MUST** logically work with the given preposition "{{preposition}}".
-    - **DO NOT** create nonsensical sentences. For example, if the preposition is "bis", do not use the verb "warten", because "warten bis" is incorrect German ("warten auf" is correct). Your primary goal is correctness.
+1.  **Create a Natural and CORRECT Sentence:**
+    - Form a simple, natural-sounding, and **absolutely correct** German sentence. Your top priority is that the sentence must be something a native speaker would actually say.
+    - The verb and context you create **MUST** logically and commonly be used with the given preposition "{{preposition}}".
+    - **DO NOT** create nonsensical or grammatically questionable sentences. For example, if the preposition is "bis", do not use the verb "warten", because "warten bis" is incorrect German ("warten auf" is correct). If the preposition is "von", do not use it with "sprechen" if "sprechen über" sounds more natural in the context.
     - The sentence must clearly require a specific case (Nominativ, Akkusativ, Dativ, or Genitiv).
     - For two-way prepositions (Wechselpräpositionen), decide whether the context implies direction (Akkusativ) or location (Dativ) and create the sentence accordingly.
 
@@ -44,7 +44,7 @@ Create a grammatically and logically correct sentence using the preposition "{{p
 
 3.  **Determine the Correct Case:** Identify the correct grammatical case (Nominativ, Akkusativ, Dativ, or Genitiv) that is required by the preposition in the context of your sentence.
 
-4.  **Determine the Correct Answer:** Figure out the exact article ('dem', 'den', 'der', 'die', 'das', 'einen', 'einem', etc.) that should fill the blank. This is the only thing that should be in the \`correctAnswer\` field.
+4.  **Determine the Correct Answer:** Figure out the exact article ('dem', 'den', 'der', 'die', 'das', etc.) that should fill the blank. This is the only thing that should be in the \`correctAnswer\` field. If the blank could be filled by more than one article (e.g. 'der' or 'einer' for feminine dative), choose the definite article ('der').
 
 5.  **Provide Translation:** Give a full Russian translation of the complete German sentence (with the blank filled in) to provide context.
 
