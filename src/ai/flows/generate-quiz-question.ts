@@ -25,7 +25,7 @@ const prompt = ai.definePrompt({
   output: { schema: GenerateQuizQuestionOutputSchema },
   prompt: `You are an AI language teacher creating a multiple-choice question for a Russian-speaking student learning German.
 
-Given the German word "{{word}}" and its details, create three relevant and distinct quiz questions.
+Given the German word "{{word}}" and its details, create one relevant quiz question.
 
 **Word Details:**
 - Part of Speech: {{details.partOfSpeech}}
@@ -43,7 +43,7 @@ Given the German word "{{word}}" and its details, create three relevant and dist
 
 **Instructions:**
 
-1.  **Choose a Question Type:** Based on the available details, randomly choose THREE of the following question types:
+1.  **Choose a Question Type:** Based on the available details, randomly choose ONE of the following question types:
     *   'translation': Ask for the Russian translation.
     *   'article': (If noun) Ask for the article.
     *   'plural': (If noun with a non-obvious plural) Ask for the plural form.
@@ -66,26 +66,12 @@ Given the German word "{{word}}" and its details, create three relevant and dist
 4.  **Response Format:** Your final output must be a single JSON object matching the GenerateQuizQuestionOutputSchema.
 
 **Example for the word "Haus":**
-[
-  {
-    "question": "Какой артикль у существительного 'Haus'?",
-    "questionType": "article",
-    "options": ["der", "die", "das", "dem"],
-    "correctAnswer": "das"
-  },
-  {
-    "question": "Какой перевод у слова 'Haus'?",
-    "questionType": "translation",
-    "options": ["дом", "машина", "дерево", "книга"],
-    "correctAnswer": "дом"
-  },
-  {
-    "question": "Какое множественное число у слова 'Haus'?",
-    "questionType": "plural",
-    "options": ["Häuser", "Hause", "Hausen", "Häuseren"],
-    "correctAnswer": "Häuser"
-  }
-]
+{
+  "question": "Какой артикль у существительного 'Haus'?",
+  "questionType": "article",
+  "options": ["der", "die", "das", "dem"],
+  "correctAnswer": "das"
+}
 `,
 });
 
@@ -95,17 +81,26 @@ const generateQuizQuestionFlow = ai.defineFlow(
     inputSchema: GenerateQuizQuestionInputSchema,
     outputSchema: GenerateQuizQuestionOutputSchema,
   },
-  async (input) => {
-    const { output, finishReason } = await prompt(input);
+  async (input): Promise<GenerateQuizQuestionOutput> => {
+    try {
+      const { output, finishReason } = await prompt(input);
 
-    if (finishReason !== 'stop' || !output) {
-      // If the model fails to generate a valid output, return a "valid" empty-like response
-      // to prevent the app from crashing. The UI will handle this gracefully.
-      return [];
+      if (finishReason !== 'stop' || !output) {
+        throw new Error('AI failed to generate a valid quiz question.');
+      }
+
+      // Basic shuffle of options to ensure randomness
+      output.options.sort(() => Math.random() - 0.5);
+      return output;
+    } catch (error) {
+      console.error('Error generating quiz question:', error);
+      // If the model fails or throws, return a fallback response that matches the schema.
+      return {
+        question: 'К сожалению, не удалось создать вопрос. Попробуйте еще раз.',
+        questionType: 'translation', // Safe default
+        options: ['-', '-', '-', '-'],
+        correctAnswer: '-',
+      };
     }
-    
-    // Basic shuffle of options to ensure randomness
-    output.forEach(q => q.options.sort(() => Math.random() - 0.5));
-    return output;
   }
 );
