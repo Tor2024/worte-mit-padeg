@@ -2,6 +2,7 @@
 
 import { getWordDetails, provideIntelligentErrorCorrection, generateQuizQuestion, practiceAdjectiveDeclension, checkRecallAnswer as checkRecallAnswerFlow, generateFillInTheBlank, generateCaseQuiz } from '@/ai/flows';
 import type { WordDetailsOutput, IntelligentErrorCorrectionInput, IntelligentErrorCorrectionOutput, GenerateQuizQuestionInput, GenerateQuizQuestionOutput, AdjectivePracticeInput, AdjectivePracticeOutput, CheckRecallInput, CheckRecallOutput, GenerateFillInTheBlankInput, GenerateFillInTheBlankOutput, GenerateCaseQuizInput, GenerateCaseQuizOutput } from '@/ai/schemas';
+import { getCachedWordDetails, setCachedWordDetails } from './wordCache';
 
 // Helper function to handle errors more gracefully
 const handleActionError = (error: unknown, defaultMessage: string): { success: false, error: string } => {
@@ -19,7 +20,22 @@ const handleActionError = (error: unknown, defaultMessage: string): { success: f
 
 export async function fetchWordDetails(word: string, partOfSpeech?: any): Promise<{ success: true, data: WordDetailsOutput } | { success: false, error: string }> {
   try {
+    // Cache is only available on the client
+    if (typeof window !== 'undefined') {
+      const cachedDetails = getCachedWordDetails(word);
+      if (cachedDetails) {
+        return { success: true, data: cachedDetails };
+      }
+    }
+
+    // If not in cache or on the server, fetch from the AI
     const result = await getWordDetails({ wordOrPhrase: word, partOfSpeech: partOfSpeech });
+
+    // Save the result to the cache before returning, only on client
+    if (typeof window !== 'undefined') {
+      setCachedWordDetails(word, result);
+    }
+
     return { success: true, data: result };
   } catch (error) {
     return handleActionError(error, 'Не удалось получить информацию о слове.');

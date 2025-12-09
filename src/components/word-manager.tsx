@@ -147,12 +147,38 @@ export function WordManager() {
   };
   
   const handleStartSession = (words: Word[]) => {
-    const wordsForReview = words.filter(word => new Date(word.nextReview) <= new Date());
+    const SESSION_SIZE = 10;
+    const NEW_WORDS_PER_SESSION = 5;
+
+    const now = new Date();
+
+    // 1. Get all words due for review
+    const wordsForReview = words.filter(word => new Date(word.nextReview) <= now);
+
+    // 2. Get new words (never studied before)
+    const newWords = words
+      .filter(word => word.repetitions === 0 && !wordsForReview.find(w => w.text === word.text))
+      .sort(() => Math.random() - 0.5) // Shuffle to get random new words
+      .slice(0, NEW_WORDS_PER_SESSION);
+
+    let sessionWords = [...new Set([...wordsForReview, ...newWords])];
+
+    // 3. If the session is still not full, add some "warm-up" words (learned recently)
+    if (sessionWords.length < SESSION_SIZE) {
+        const remainingSlots = SESSION_SIZE - sessionWords.length;
+        const fillerCandidates = words
+            .filter(word => !sessionWords.find(w => w.text === word.text)) // Exclude already selected words
+            .sort((a, b) => new Date(a.nextReview).getTime() - new Date(b.nextReview).getTime()); // Get soonest first
+
+        const fillerWords = fillerCandidates.slice(0, remainingSlots);
+        sessionWords = [...sessionWords, ...fillerWords];
+    }
     
-    if (wordsForReview.length > 0) {
-      startSessionWithWords(wordsForReview);
+    if (sessionWords.length > 0) {
+      startSessionWithWords(sessionWords);
     } else {
         if (words.length > 0) {
+            // If no words were selected by the logic, but dictionary is not empty, ask user for a session with all words
             setEarlySessionDialogOpen(true);
         } else {
             toast({ title: "Словарь пуст", description: "Добавьте слова в словарь, чтобы начать обучение.", variant: "default" });

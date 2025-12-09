@@ -14,7 +14,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { getNextReviewDate } from '@/lib/srs';
+import { calculateNextReview } from '@/lib/srs';
 import { useToast } from '@/hooks/use-toast';
 
 
@@ -56,7 +56,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isOpen, setIsOpen] = useState(true);
   const [view, setView] = useState<SessionView>('loading');
-  const [quizData, setQuizData] = useState<GenerateQuizQuestionOutput | GenerateFillInTheBlankOutput | null>(null);
+  const [quizData, setQuizData] = useState<GenerateQuizQuestionOutput[0] | GenerateFillInTheBlankOutput | null>(null);
   const [feedback, setFeedback] = useState<FeedbackType>(null);
   
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -130,8 +130,10 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
             setView('flashcard');
         } else if (nextView === 'multiple-choice') {
             const result = await fetchQuizQuestion({ word: word.text, details: word.details });
-            if (result.success && result.data.options.length > 0) {
-                setQuizData(result.data);
+            // Now, result.data is an array of questions. Pick one at random.
+            if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+                const randomQuestion = result.data[Math.floor(Math.random() * result.data.length)];
+                setQuizData(randomQuestion);
                 setView('multiple-choice');
             } else {
                 throw new Error(result.success === false ? result.error : "AI failed to generate options.");
@@ -171,7 +173,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
   }, [currentWord, loadView]);
   
   const handleNext = (quality: number) => {
-    const newSrsData = getNextReviewDate(currentWord, quality);
+    const newSrsData = calculateNextReview(currentWord, quality);
 
     // Determine the new learning status
     let newLearningStatus = currentWord.details.learningStatus || 'new';
@@ -221,7 +223,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     let result;
     try {
         if (view === 'multiple-choice') {
-            const question = quizData as GenerateQuizQuestionOutput;
+            const question = quizData as GenerateQuizQuestionOutput[0];
             const isCorrect = selectedOption === question.correctAnswer;
             // For multiple choice, we don't need AI feedback, so we create it ourselves.
             setFeedback({
@@ -496,7 +498,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     }
     
     if (view === 'multiple-choice') {
-        const question = quizData as GenerateQuizQuestionOutput;
+        const question = quizData as GenerateQuizQuestionOutput[0];
         if (!question) {
             return (
                 <div className="space-y-6 flex flex-col items-center justify-center h-full">
@@ -550,7 +552,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
       } else {
           let quality: number;
           if (view === 'multiple-choice') {
-              quality = selectedOption === (quizData as GenerateQuizQuestionOutput)?.correctAnswer ? 5 : 1;
+              quality = selectedOption === (quizData as GenerateQuizQuestionOutput[0])?.correctAnswer ? 5 : 1;
           } else if (answerStatus === 'correct') {
               quality = 5;
           } else if (answerStatus === 'synonym') {

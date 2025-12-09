@@ -1,58 +1,82 @@
-import type { Word } from './types';
+import { Word } from './types';
 
-// SuperMemo 2 (SM-2) algorithm implementation
-// See: https://www.supermemo.com/en/archives1990-2015/english/ol/sm2
+// SM-2 Algorithm Implementation
+
+const MIN_EASE_FACTOR = 1.3;
+
+interface SM2Result {
+  interval: number;
+  repetitions: number;
+  easeFactor: number;
+  nextReview: string;
+}
 
 /**
- * Calculates the next review date for a word based on the user's performance.
- * @param word The word object with its current SRS data.
- * @param quality The user's recall quality (0-5 scale). 
- *                0-2: incorrect, 3: correct but difficult, 4: correct with hesitation, 5: perfect recall.
- * @returns An object with the updated SRS fields for the word.
+ * Calculates the next review date for a word based on the SM-2 algorithm.
+ * @param word The word to update.
+ * @param quality The quality of the user's response (0-5).
+ *                0 - "Blackout", complete failure to recall.
+ *                1 - Incorrect response, but upon seeing the correct answer it felt familiar.
+ *                2 - Incorrect response, but upon seeing the correct answer it seemed easy to remember.
+ *                3 - Correct response, but with significant difficulty.
+ *                4 - Correct response, after some hesitation.
+ *                5 - Correct response with perfect recall.
  */
-export function getNextReviewDate(
-  word: Word, 
-  quality: number
-): Pick<Word, 'nextReview' | 'interval' | 'easeFactor' | 'repetitions' | 'lastReviewed'> {
-  
+export function calculateNextReview(word: Word, quality: number): SM2Result {
+  if (quality < 0 || quality > 5) {
+    throw new Error('Quality must be between 0 and 5.');
+  }
+
+  let { repetitions, easeFactor, interval } = word;
+
+  // If the quality of response was poor (e.g., less than 3),
+  // start repetitions from the beginning without changing the ease factor.
   if (quality < 3) {
-    // Incorrect response. Reset repetitions and interval.
-    return {
-      repetitions: 0,
-      interval: 1, // Reset interval to 1 day
-      easeFactor: word.easeFactor, // Ease factor is not changed on incorrect responses
-      nextReview: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      lastReviewed: new Date().toISOString(),
-    };
-  }
-
-  // Correct response
-  let newEaseFactor = word.easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
-  if (newEaseFactor < 1.3) {
-    newEaseFactor = 1.3; // The minimum ease factor is 1.3
-  }
-
-  let newRepetitions: number;
-  let newInterval: number;
-
-  if (word.repetitions === 0) {
-    newInterval = 1;
-    newRepetitions = 1;
-  } else if (word.repetitions === 1) {
-    newInterval = 6;
-    newRepetitions = 2;
+    repetitions = 0;
+    interval = 1;
   } else {
-    newInterval = Math.round(word.interval * newEaseFactor);
-    newRepetitions = word.repetitions + 1;
+    // Correct response, calculate new ease factor
+    easeFactor = easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+    if (easeFactor < MIN_EASE_FACTOR) {
+      easeFactor = MIN_EASE_FACTOR;
+    }
+
+    repetitions += 1;
+
+    // Calculate new interval
+    if (repetitions === 1) {
+      interval = 1;
+    } else if (repetitions === 2) {
+      interval = 6;
+    } else {
+      interval = Math.round(interval * easeFactor);
+    }
   }
   
-  const nextReviewDate = new Date(Date.now() + newInterval * 24 * 60 * 60 * 1000);
+  // Calculate next review date
+  const now = new Date();
+  const nextReviewDate = new Date(now.setDate(now.getDate() + interval));
 
   return {
-    repetitions: newRepetitions,
-    interval: newInterval,
-    easeFactor: newEaseFactor,
+    repetitions,
+    easeFactor,
+    interval,
     nextReview: nextReviewDate.toISOString(),
-    lastReviewed: new Date().toISOString(),
   };
+}
+
+/**
+ * Creates a new word with default SRS values.
+ */
+export function createNewWord(text: string, details: any): Word {
+    const now = new Date();
+    return {
+        text,
+        details,
+        repetitions: 0,
+        easeFactor: 2.5,
+        interval: 0,
+        nextReview: now.toISOString(),
+        lastReviewed: null,
+    };
 }
