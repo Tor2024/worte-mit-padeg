@@ -97,12 +97,12 @@ export const GenerateQuizQuestionInputSchema = z.object({
 });
 export type GenerateQuizQuestionInput = z.infer<typeof GenerateQuizQuestionInputSchema>;
 
-export const GenerateQuizQuestionOutputSchema = z.object({
+export const GenerateQuizQuestionOutputSchema = z.array(z.object({
   question: z.string().describe('The question being asked.'),
   questionType: z.enum(['translation', 'article', 'plural', 'perfect_tense', 'case']).describe('The type of question being asked.'),
   options: z.array(z.string()).describe('A list of 4 options, including the correct answer and 3 distractors.'),
   correctAnswer: z.string().describe('The correct answer from the options list.'),
-});
+}));
 export type GenerateQuizQuestionOutput = z.infer<typeof GenerateQuizQuestionOutputSchema>;
 
 // Schema for practice-adjective-declension flow
