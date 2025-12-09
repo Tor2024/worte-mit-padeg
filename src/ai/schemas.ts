@@ -6,7 +6,6 @@ export const WordDetailsInputSchema = z.object({
     .string()
     .describe('The German word or phrase to get details for.'),
   partOfSpeech: z.enum(['noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'other']).optional().describe('An optional hint for the part of speech to resolve ambiguity.'),
-  learningStatus: z.enum(['new', 'in_progress', 'learned']).optional().describe('The current learning status of the word.'),
 });
 export type WordDetailsInput = z.infer<typeof WordDetailsInputSchema>;
 
@@ -18,7 +17,6 @@ const ExampleSentenceSchema = z.object({
 export const WordDetailsOutputSchema = z.object({
   translation: z.string().describe('The primary Russian translation of the word/phrase.'),
   alternativeTranslations: z.array(z.string()).optional().describe('A list of alternative Russian translations, if they exist.'),
-  learningStatus: z.enum(['new', 'in_progress', 'learned']).describe('The learning status of the word.'),
   partOfSpeech: z
     .enum(['noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'other'])
     .describe('The determined part of speech.'),
@@ -66,6 +64,7 @@ export const WordDetailsOutputSchema = z.object({
     .array(ExampleSentenceSchema)
     .min(3)
     .describe('An array of three distinct example sentences, each with German and Russian versions.'),
+  learningStatus: z.enum(['new', 'in_progress', 'learned']).optional().describe('The current learning status of the word.'),
 });
 export type WordDetailsOutput = z.infer<typeof WordDetailsOutputSchema>;
 
@@ -75,6 +74,7 @@ export const IntelligentErrorCorrectionInputSchema = z.object({
   word: z.string().describe('The word or phrase the user is practicing.'),
   userInput: z.string().describe('The user input that needs to be checked.'),
   practiceType: z.enum(['article', 'perfect', 'fill-in-the-blank', 'case-quiz']).describe('The specific type of practice being performed.'),
+  wordType: z.string().optional().describe('A hint about the word type for context.'),
   expectedAnswer: z.string().optional().describe('The expected correct answer for the practice type.'),
   sentenceContext: z.string().optional().describe('The sentence in which the word was used, with a blank for the word. For fill-in-the-blank checks.'),
   userCaseSelection: z.string().optional().describe("The case the user selected in a case quiz."),
@@ -97,15 +97,12 @@ export const GenerateQuizQuestionInputSchema = z.object({
 });
 export type GenerateQuizQuestionInput = z.infer<typeof GenerateQuizQuestionInputSchema>;
 
-export const QuizQuestionSchema = z.object({
+export const GenerateQuizQuestionOutputSchema = z.object({
   question: z.string().describe('The question being asked.'),
   questionType: z.enum(['translation', 'article', 'plural', 'perfect_tense', 'case']).describe('The type of question being asked.'),
   options: z.array(z.string()).describe('A list of 4 options, including the correct answer and 3 distractors.'),
   correctAnswer: z.string().describe('The correct answer from the options list.'),
 });
-export type QuizQuestion = z.infer<typeof QuizQuestionSchema>;
-
-export const GenerateQuizQuestionOutputSchema = z.array(QuizQuestionSchema).min(3).max(3);
 export type GenerateQuizQuestionOutput = z.infer<typeof GenerateQuizQuestionOutputSchema>;
 
 // Schema for practice-adjective-declension flow
@@ -138,7 +135,6 @@ export const CheckRecallInputSchema = z.object({
   partOfSpeech: z.enum(['noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'other']).describe('The part of speech of the German word.'),
   article: z.string().optional().describe('The article of the German noun, if applicable.'),
   userInput: z.string().describe('The user\'s answer.'),
-  correctAnswer: z.string().optional().describe('The correct answer, for context.'),
 });
 export type CheckRecallInput = z.infer<typeof CheckRecallInputSchema>;
 

@@ -67,6 +67,8 @@ export function AdjectiveTrainer({ dictionary, onEndSession }: AdjectiveTrainerP
   const [answerStatus, setAnswerStatus] = useState<AnswerStatus>('unanswered');
   const [feedback, setFeedback] = useState<AdjectivePracticeOutput | null>(null);
 
+  const isLoading = useMemo(() => answerStatus === 'checking', [answerStatus]);
+
   const loadNextTask = useCallback(() => {
     setTask(generateTask(dictionary));
     setInputValue('');
@@ -207,9 +209,9 @@ export function AdjectiveTrainer({ dictionary, onEndSession }: AdjectiveTrainerP
             <Button variant="ghost" onClick={handleClose}>
                 Завершить
             </Button>
-            {answerStatus === 'unanswered' ? (
-                <Button onClick={handleCheck} disabled={!inputValue || answerStatus === 'checking'}>
-                    {answerStatus === 'checking' ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : null}
+            {answerStatus === 'unanswered' || answerStatus === 'checking' ? (
+                <Button onClick={handleCheck} disabled={!inputValue || isLoading}>
+                    {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2"/>}
                     Проверить
                 </Button>
             ) : (

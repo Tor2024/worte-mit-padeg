@@ -2,7 +2,7 @@ import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/google-genai';
 
 // Ротация API ключей для обхода лимитов
-const getApiKey = () => {
+const getApiKey = (): string | false | undefined => {
   const keys = process.env.GEMINI_API_KEYS?.split(',').filter(k => k.trim());
   if (!keys || keys.length === 0) {
     // Если переменная не задана или пуста, возвращаем undefined,

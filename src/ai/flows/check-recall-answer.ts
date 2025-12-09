@@ -56,11 +56,11 @@ The student was asked to translate the Russian word "{{russianWord}}" into Germa
 
 - \`isCorrect\`: \`true\` if the answer is a direct match OR a valid synonym.
 - \`isSynonym\`: \`true\` ONLY if it's a valid synonym, otherwise \`false\`.
-- \`correctAnswer\`: Always provide the original, exact expected answer (e.g., "{{article}} {{germanWord}}" or just "{{germanWord}}").
+- \`correctAnswer\`: Always provide the original, exact expected answer. If an article is present, combine it with the word (e.g., "{{article}} {{germanWord}}"). Otherwise, just use the word "{{germanWord}}".
 - \`explanation\`: Provide a clear explanation in Russian based on the evaluation steps.
     - Correct match: "Отлично! Все верно."
     - Synonym: "Тоже правильно! '{{userInput}}' — хороший синоним для '{{germanWord}}'."
-    - Incorrect: "Не совсем верно. Правильный ответ: '{{correctAnswer}}'. [Your brief explanation of the error]."
+    - Incorrect: "Не совсем верно. Правильный ответ: '{{#if article}}{{article}} {{/if}}{{germanWord}}'. [Your brief explanation of the error]."
 
 **Example (Correct):**
 - Input: { russianWord: "дом", germanWord: "Haus", article: "das", userInput: "das Haus" }
@@ -97,17 +97,8 @@ const checkRecallAnswerFlow = ai.defineFlow(
             }
         }
     }
-    const { output, finishReason } = await prompt({...input, correctAnswer });
-    if (finishReason !== 'stop' || !output) {
-      return {
-          isCorrect: false,
-          isSynonym: false,
-          correctAnswer: correctAnswer,
-          explanation: `Произошла ошибка при проверке вашего ответа. Правильный ответ: "${correctAnswer}".`
-      }
-    }
-    output.correctAnswer = correctAnswer;
-    return output;
+    const { output } = await prompt(input);
+    return output!;
   }
 );
 

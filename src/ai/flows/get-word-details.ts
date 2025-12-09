@@ -15,27 +15,17 @@ import {
   type WordDetailsInput,
   type WordDetailsOutput,
 } from '@/ai/schemas';
-import { getCachedWordDetails, setCachedWordDetails } from '@/lib/wordCache';
 
 export async function getWordDetails(
   input: WordDetailsInput
 ): Promise<WordDetailsOutput> {
-  const cached = getCachedWordDetails(input.wordOrPhrase);
-  if (cached) {
-    return cached;
-  }
   // Auto-capitalize nouns
   if (input.partOfSpeech === 'noun' && input.wordOrPhrase) {
     input.wordOrPhrase = input.wordOrPhrase.charAt(0).toUpperCase() + input.wordOrPhrase.slice(1);
   } else if (input.wordOrPhrase) {
     input.wordOrPhrase = input.wordOrPhrase.toLowerCase();
   }
-  const result = await getWordDetailsFlow(input);
-  if (!result.learningStatus) {
-    result.learningStatus = 'new';
-  }
-  setCachedWordDetails(input.wordOrPhrase, result);
-  return result;
+  return getWordDetailsFlow(input);
 }
 
 const prompt = ai.definePrompt({
@@ -87,30 +77,17 @@ const getWordDetailsFlow = ai.defineFlow(
     outputSchema: WordDetailsOutputSchema,
   },
   async input => {
-    const { output, finishReason } = await prompt(input);
-
-    if (finishReason !== 'stop' || !output) {
-      // Fallback response
-      return {
-        translation: 'Не удалось получить детали слова.',
-        alternativeTranslations: [],
-        learningStatus: input.learningStatus || 'new',
-        partOfSpeech: 'other' as const,
-        examples: [
-          { german: 'Es ist ein Fehler aufgetreten.', russian: 'Произошла ошибка.' },
-          { german: 'Bitte versuchen Sie es später erneut.', russian: 'Пожалуйста, попробуйте позже.' },
-          { german: 'Das Wort konnte nicht gefunden werden.', russian: 'Не удалось найти слово.' },
-        ],
-      };
-    }
+    const {output} = await prompt(input);
     
     // Ensure the main word is correctly cased in the output
-    if (output.partOfSpeech === 'noun') {
-      input.wordOrPhrase = input.wordOrPhrase.charAt(0).toUpperCase() + input.wordOrPhrase.slice(1);
-    } else {
-      input.wordOrPhrase = input.wordOrPhrase.toLowerCase();
+    if (output) {
+      if (output.partOfSpeech === 'noun') {
+        input.wordOrPhrase = input.wordOrPhrase.charAt(0).toUpperCase() + input.wordOrPhrase.slice(1);
+      } else {
+        input.wordOrPhrase = input.wordOrPhrase.toLowerCase();
+      }
     }
     
-    return output;
+    return output!;
   }
 );
