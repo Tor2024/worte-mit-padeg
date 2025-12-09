@@ -6,6 +6,7 @@ export const WordDetailsInputSchema = z.object({
     .string()
     .describe('The German word or phrase to get details for.'),
   partOfSpeech: z.enum(['noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'other']).optional().describe('An optional hint for the part of speech to resolve ambiguity.'),
+  learningStatus: z.enum(['new', 'in_progress', 'learned']).optional().describe('The current learning status of the word.'),
 });
 export type WordDetailsInput = z.infer<typeof WordDetailsInputSchema>;
 
@@ -17,6 +18,7 @@ const ExampleSentenceSchema = z.object({
 export const WordDetailsOutputSchema = z.object({
   translation: z.string().describe('The primary Russian translation of the word/phrase.'),
   alternativeTranslations: z.array(z.string()).optional().describe('A list of alternative Russian translations, if they exist.'),
+  learningStatus: z.enum(['new', 'in_progress', 'learned']).describe('The learning status of the word.'),
   partOfSpeech: z
     .enum(['noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'other'])
     .describe('The determined part of speech.'),
@@ -95,12 +97,15 @@ export const GenerateQuizQuestionInputSchema = z.object({
 });
 export type GenerateQuizQuestionInput = z.infer<typeof GenerateQuizQuestionInputSchema>;
 
-export const GenerateQuizQuestionOutputSchema = z.object({
+export const QuizQuestionSchema = z.object({
   question: z.string().describe('The question being asked.'),
   questionType: z.enum(['translation', 'article', 'plural', 'perfect_tense', 'case']).describe('The type of question being asked.'),
   options: z.array(z.string()).describe('A list of 4 options, including the correct answer and 3 distractors.'),
   correctAnswer: z.string().describe('The correct answer from the options list.'),
 });
+export type QuizQuestion = z.infer<typeof QuizQuestionSchema>;
+
+export const GenerateQuizQuestionOutputSchema = z.array(QuizQuestionSchema).min(3).max(3);
 export type GenerateQuizQuestionOutput = z.infer<typeof GenerateQuizQuestionOutputSchema>;
 
 // Schema for practice-adjective-declension flow
@@ -133,6 +138,7 @@ export const CheckRecallInputSchema = z.object({
   partOfSpeech: z.enum(['noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'other']).describe('The part of speech of the German word.'),
   article: z.string().optional().describe('The article of the German noun, if applicable.'),
   userInput: z.string().describe('The user\'s answer.'),
+  correctAnswer: z.string().optional().describe('The correct answer, for context.'),
 });
 export type CheckRecallInput = z.infer<typeof CheckRecallInputSchema>;
 

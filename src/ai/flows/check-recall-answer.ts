@@ -97,11 +97,17 @@ const checkRecallAnswerFlow = ai.defineFlow(
             }
         }
     }
-    const { output } = await prompt({...input, correctAnswer });
-    if (output) {
-      output.correctAnswer = correctAnswer;
+    const { output, finishReason } = await prompt({...input, correctAnswer });
+    if (finishReason !== 'stop' || !output) {
+      return {
+          isCorrect: false,
+          isSynonym: false,
+          correctAnswer: correctAnswer,
+          explanation: `Произошла ошибка при проверке вашего ответа. Правильный ответ: "${correctAnswer}".`
+      }
     }
-    return output!;
+    output.correctAnswer = correctAnswer;
+    return output;
   }
 );
 
