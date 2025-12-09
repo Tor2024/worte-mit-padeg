@@ -25,7 +25,7 @@ const prompt = ai.definePrompt({
   output: { schema: GenerateQuizQuestionOutputSchema },
   prompt: `You are an AI language teacher creating a multiple-choice question for a Russian-speaking student learning German.
 
-Given the German word "{{word}}" and its details, create one relevant quiz question.
+Given the German word "{{word}}" and its details, create three relevant and distinct quiz questions.
 
 **Word Details:**
 - Part of Speech: {{details.partOfSpeech}}
@@ -43,7 +43,7 @@ Given the German word "{{word}}" and its details, create one relevant quiz quest
 
 **Instructions:**
 
-1.  **Choose a Question Type:** Based on the available details, randomly choose ONE of the following question types:
+1.  **Choose a Question Type:** Based on the available details, randomly choose THREE of the following question types:
     *   'translation': Ask for the Russian translation.
     *   'article': (If noun) Ask for the article.
     *   'plural': (If noun with a non-obvious plural) Ask for the plural form.
@@ -66,12 +66,26 @@ Given the German word "{{word}}" and its details, create one relevant quiz quest
 4.  **Response Format:** Your final output must be a single JSON object matching the GenerateQuizQuestionOutputSchema.
 
 **Example for the word "Haus":**
-{
-  "question": "Какой артикль у существительного 'Haus'?",
-  "questionType": "article",
-  "options": ["der", "die", "das", "dem"],
-  "correctAnswer": "das"
-}
+[
+  {
+    "question": "Какой артикль у существительного 'Haus'?",
+    "questionType": "article",
+    "options": ["der", "die", "das", "dem"],
+    "correctAnswer": "das"
+  },
+  {
+    "question": "Какой перевод у слова 'Haus'?",
+    "questionType": "translation",
+    "options": ["дом", "машина", "дерево", "книга"],
+    "correctAnswer": "дом"
+  },
+  {
+    "question": "Какое множественное число у слова 'Haus'?",
+    "questionType": "plural",
+    "options": ["Häuser", "Hause", "Hausen", "Häuseren"],
+    "correctAnswer": "Häuser"
+  }
+]
 `,
 });
 
@@ -87,16 +101,11 @@ const generateQuizQuestionFlow = ai.defineFlow(
     if (finishReason !== 'stop' || !output) {
       // If the model fails to generate a valid output, return a "valid" empty-like response
       // to prevent the app from crashing. The UI will handle this gracefully.
-      return {
-        question: 'Error',
-        questionType: 'translation',
-        options: [],
-        correctAnswer: '',
-      };
+      return [];
     }
     
     // Basic shuffle of options to ensure randomness
-    output.options.sort(() => Math.random() - 0.5);
+    output.forEach(q => q.options.sort(() => Math.random() - 0.5));
     return output;
   }
 );

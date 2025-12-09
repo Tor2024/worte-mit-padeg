@@ -8,7 +8,7 @@ import { ArrowLeft, ArrowRight, Loader2, Check, X, RefreshCw } from 'lucide-reac
 import { Progress } from '@/components/ui/progress';
 import { LearningView } from '@/components/learning-view';
 import { fetchQuizQuestion, checkAnswer, checkRecallAnswer, fetchFillInTheBlank } from '@/lib/actions';
-import type { GenerateQuizQuestionOutput, IntelligentErrorCorrectionOutput, CheckRecallOutput, GenerateFillInTheBlankOutput } from '@/ai/schemas';
+import type { GenerateQuizQuestionOutput, QuizQuestion, IntelligentErrorCorrectionOutput, CheckRecallOutput, GenerateFillInTheBlankOutput } from '@/ai/schemas';
 import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -56,7 +56,9 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isOpen, setIsOpen] = useState(true);
   const [view, setView] = useState<SessionView>('loading');
-  const [quizData, setQuizData] = useState<GenerateQuizQuestionOutput | GenerateFillInTheBlankOutput | null>(null);
+  const [quizData, setQuizData] = useState<GenerateFillInTheBlankOutput | null>(null);
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [feedback, setFeedback] = useState<FeedbackType>(null);
   
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -119,6 +121,8 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     setSelectedOption(null);
     setInputValue('');
     setQuizData(null);
+    setQuizQuestions([]);
+    setCurrentQuestionIndex(0);
     setFeedback(null);
     
     const nextView = determineNextView(word);
@@ -128,11 +132,11 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
             setView('flashcard');
         } else if (nextView === 'multiple-choice') {
             const result = await fetchQuizQuestion({ word: word.text, details: word.details });
-            if (result.success && result.data.options.length > 0) {
-                setQuizData(result.data);
+            if (result.success && result.data.length > 0) {
+                setQuizQuestions(result.data);
                 setView('multiple-choice');
             } else {
-                throw new Error(result.success === false ? result.error : "AI failed to generate options.");
+                throw new Error(result.success === false ? result.error : "AI failed to generate questions.");
             }
         } else if (nextView === 'article-quiz') {
             setView('article-quiz');
@@ -170,7 +174,24 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
   
   const handleNext = (quality: number) => {
     const newSrsData = getNextReviewDate(currentWord, quality);
-    onWordUpdate({ ...currentWord, ...newSrsData });
+
+    let newLearningStatus = currentWord.details.learningStatus;
+    if (quality >= 4) {
+      newLearningStatus = 'learned';
+    } else if (quality >= 2) {
+      newLearningStatus = 'in_progress';
+    }
+
+    const updatedWord = {
+      ...currentWord,
+      ...newSrsData,
+      details: {
+        ...currentWord.details,
+        learningStatus: newLearningStatus,
+      },
+    };
+
+    onWordUpdate(updatedWord);
 
     if (currentIndex < words.length - 1) {
       setCurrentIndex(prev => prev + 1);
@@ -200,13 +221,13 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     let result;
     try {
         if (view === 'multiple-choice') {
-            const question = quizData as GenerateQuizQuestionOutput;
+            const question = quizQuestions[currentQuestionIndex];
+            if (!question) return;
             const isCorrect = selectedOption === question.correctAnswer;
-            // For multiple choice, we don't need AI feedback, so we create it ourselves.
             setFeedback({
                 isCorrect: isCorrect,
                 explanation: isCorrect ? "Все верно!" : `Правильный ответ: ${question.correctAnswer}`
-            });
+            } as IntelligentErrorCorrectionOutput);
             setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
             return;
         } else if (view === 'article-quiz') {
@@ -475,7 +496,7 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
     }
     
     if (view === 'multiple-choice') {
-        const question = quizData as GenerateQuizQuestionOutput;
+        const question = quizQuestions[currentQuestionIndex];
         if (!question) {
             return (
                 <div className="space-y-6 flex flex-col items-center justify-center h-full">
@@ -527,17 +548,27 @@ export function UnifiedSession({ words, onEndSession, onWordUpdate }: UnifiedSes
       if (answerStatus === 'unanswered') {
           handleCheck();
       } else {
-          let quality: number;
-          if (view === 'multiple-choice') {
-              quality = selectedOption === (quizData as GenerateQuizQuestionOutput)?.correctAnswer ? 5 : 1;
-          } else if (answerStatus === 'correct') {
-              quality = 5;
-          } else if (answerStatus === 'synonym') {
-              quality = 4;
+          if (view === 'multiple-choice' && currentQuestionIndex < quizQuestions.length - 1) {
+              // Move to the next question in the same word's quiz
+              setCurrentQuestionIndex(prev => prev + 1);
+              setAnswerStatus('unanswered');
+              setSelectedOption(null);
+              setFeedback(null);
           } else {
-              quality = 1;
+              // Last question or not a quiz, move to the next word
+              let quality: number;
+              if (view === 'multiple-choice') {
+                  const question = quizQuestions[currentQuestionIndex];
+                  quality = selectedOption === question?.correctAnswer ? 5 : 1;
+              } else if (answerStatus === 'correct') {
+                  quality = 5;
+              } else if (answerStatus === 'synonym') {
+                  quality = 4;
+              } else {
+                  quality = 1;
+              }
+              handleNext(quality);
           }
-          handleNext(quality);
       }
   }
 
